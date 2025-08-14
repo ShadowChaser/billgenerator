@@ -16,7 +16,8 @@ export interface Bill {
   period: string; // e.g., JANUARY-2025
   landlord_id: UUID;
   agreement_date: string; // ISO date
-  amount: number;
+  rate?: number; // monthly rate
+  amount: number; // total value
   signature_url?: string | null;
   created_at: string;
 }

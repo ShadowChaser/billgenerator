@@ -30,7 +30,14 @@ const monthNames = [
 ];
 
 function buildPeriodFromDate(date: Date) {
-  return `${monthNames[date.getMonth()]}-${date.getFullYear()}`;
+  return format(date, "yyyy-MM");
+}
+
+function monthInputToDisplay(monthValue: string) {
+  // monthValue expected: YYYY-MM
+  const [y, m] = monthValue.split("-");
+  const idx = Math.max(0, Math.min(11, Number(m) - 1));
+  return `${monthNames[idx]}- ${y}`;
 }
 
 export default function NewBillPage() {
@@ -45,41 +52,17 @@ export default function NewBillPage() {
       date: format(new Date(), "yyyy-MM-dd"),
       agreement_date: format(new Date(), "yyyy-MM-dd"),
       period: buildPeriodFromDate(new Date()),
-      landlord_mode: "select",
+      landlord_mode: "manual",
+      landlord_name: "",
     },
   });
 
   useEffect(() => {
-    let ls = getLandlordsLocal();
-    const existing = ls.find(
-      (l) => l.name.trim().toLowerCase() === "bijayini kundu"
-    );
-    let seeded = existing;
-    if (!existing) {
-      const newL: Landlord = {
-        id: uuidv4(),
-        name: "Bijayini Kundu",
-        address: "",
-        signature_url: undefined,
-        created_at: new Date().toISOString(),
-      };
-      saveLandlord(newL);
-      seeded = newL;
-      ls = [newL, ...ls];
-    }
-    setLandlords(ls);
-    form.setValue("landlord_mode", "select");
-    if (seeded) {
-      form.setValue("landlord_id", seeded.id as any);
-    }
+    setLandlords(getLandlordsLocal());
+    form.setValue("landlord_mode", "manual");
   }, [form]);
 
-  const landlordId = form.watch("landlord_id");
-  const landlordMode = form.watch("landlord_mode");
   const landlordNameManual = form.watch("landlord_name")?.trim() ?? "";
-  const selectedLandlord = useMemo(() => {
-    return landlords.find((l) => l.id === landlordId);
-  }, [landlords, landlordId]);
 
   async function computeNextBillNumber(): Promise<string> {
     return computeNextNumericBillNumber();
@@ -95,8 +78,7 @@ export default function NewBillPage() {
         finalBillNumber = `BILL-${uuidv4().slice(0, 8).toUpperCase()}`;
       }
 
-      let signatureUrl =
-        values.signature_url ?? selectedLandlord?.signature_url ?? null;
+      let signatureUrl = values.signature_url ?? null;
 
       const fileList = (values as { signature_file?: FileList }).signature_file;
       const file: File | undefined = fileList?.[0];
@@ -104,31 +86,28 @@ export default function NewBillPage() {
         signatureUrl = await fileToDataUrl(file);
       }
 
-      // Determine landlord id/name: create one if manual mode
-      let landlordIdForBill = values.landlord_id as string;
-      let landlordNameForPdf = selectedLandlord?.name ?? "";
-      if (values.landlord_mode === "manual") {
-        const newLandlord: Landlord = {
-          id: uuidv4(),
-          name: landlordNameManual,
-          address: "",
-          signature_url: undefined,
-          created_at: new Date().toISOString(),
-        };
-        saveLandlord(newLandlord);
-        setLandlords((prev) => [newLandlord, ...prev]);
-        landlordIdForBill = newLandlord.id;
-        landlordNameForPdf = newLandlord.name;
-      }
+      // Landlord is manual only; ensure it exists in local storage
+      const newLandlord: Landlord = {
+        id: uuidv4(),
+        name: landlordNameManual,
+        address: "",
+        signature_url: undefined,
+        created_at: new Date().toISOString(),
+      };
+      saveLandlord(newLandlord);
+      setLandlords((prev) => [newLandlord, ...prev]);
+      const landlordIdForBill = newLandlord.id;
+      const landlordNameForPdf = newLandlord.name;
 
       const newBill: Bill = {
         id: uuidv4(),
         bill_number: finalBillNumber,
         bill_mode: values.bill_mode,
         date: values.date,
-        period: values.period,
+        period: monthInputToDisplay(values.period),
         landlord_id: landlordIdForBill,
         agreement_date: values.agreement_date,
+        rate: values.rate ? Number(values.rate) : undefined,
         amount: Number(values.amount),
         signature_url: signatureUrl ?? undefined,
         created_at: new Date().toISOString(),
@@ -141,12 +120,17 @@ export default function NewBillPage() {
       const amountFormatted = Number(values.amount).toLocaleString("en-IN", {
         maximumFractionDigits: 0,
       });
+      const rateFormatted = values.rate
+        ? Number(values.rate).toLocaleString("en-IN", {
+            maximumFractionDigits: 0,
+          })
+        : amountFormatted;
       const billDateDisplay = format(new Date(values.date), "dd-MM-yyyy");
       const agreementDisplay = format(
         new Date(values.agreement_date),
         "do MMMM yyyy"
       );
-      const periodDisplay = values.period.replace("-", "- ");
+      const periodDisplay = monthInputToDisplay(values.period);
       const html = `
         <div style="position:relative; font-family:'Times New Roman', Times, serif; color:#000; width:794px; height:1123px; margin:0 auto; padding:24px 36px; background:#ffffff;">
           <div style="text-align:center; font-weight:700; font-size:18pt; text-decoration: underline;">HOUSE RENT BILL</div>
@@ -180,7 +164,7 @@ export default function NewBillPage() {
               <tr>
                 <td style="padding:10px 6px; text-align:left;">HOUSE RENT</td>
                 <td style="padding:10px 6px;">${periodDisplay}</td>
-                <td style="padding:10px 6px;">Rs.${amountFormatted}/- P.M</td>
+                <td style="padding:10px 6px;">Rs.${rateFormatted}/- P.M</td>
                 <td style="padding:10px 6px;">Rs.${amountFormatted}/-</td>
               </tr>
             </tbody>
@@ -247,10 +231,10 @@ export default function NewBillPage() {
           <div className="text-sm font-semibold opacity-80">Bill details</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="grid gap-1">
-              <span className="text-sm">Period (MONTH-YEAR)</span>
+              <span className="text-sm">Period (Month)</span>
               <input
+                type="month"
                 className="border rounded px-3 py-2 bg-transparent"
-                placeholder="e.g. JANUARY-2025"
                 {...form.register("period")}
               />
               {form.formState.errors.period && (
@@ -311,62 +295,19 @@ export default function NewBillPage() {
           <div className="text-sm font-semibold opacity-80">Landlord</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <div className="flex items-center gap-3 text-sm">
-                <label className="inline-flex items-center gap-2">
-                  <input
-                    type="radio"
-                    value="select"
-                    {...form.register("landlord_mode")}
-                    defaultChecked
-                  />
-                  Select landlord
-                </label>
-                <label className="inline-flex items-center gap-2">
-                  <input
-                    type="radio"
-                    value="manual"
-                    {...form.register("landlord_mode")}
-                  />
-                  Enter name
-                </label>
-              </div>
-              {landlordMode === "select" ? (
-                <label className="grid gap-1">
-                  <span className="text-sm">Landlord</span>
-                  <select
-                    className="border rounded px-3 py-2 bg-transparent"
-                    {...form.register("landlord_id")}
-                  >
-                    <option value="">Select landlord</option>
-                    {landlords.map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {l.name}
-                      </option>
-                    ))}
-                  </select>
-                  {(form.formState.errors.landlord_id ||
-                    form.formState.errors.landlord_mode) && (
-                    <span className="text-xs text-red-600">
-                      Select a landlord
-                    </span>
-                  )}
-                </label>
-              ) : (
-                <label className="grid gap-1">
-                  <span className="text-sm">Landlord Name</span>
-                  <input
-                    className="border rounded px-3 py-2 bg-transparent"
-                    placeholder="Type landlord name"
-                    {...form.register("landlord_name")}
-                  />
-                  {(form.formState.errors.landlord_name ||
-                    form.formState.errors.landlord_mode) && (
-                    <span className="text-xs text-red-600">
-                      Enter a landlord name
-                    </span>
-                  )}
-                </label>
-              )}
+              <label className="grid gap-1">
+                <span className="text-sm">Landlord Name</span>
+                <input
+                  className="border rounded px-3 py-2 bg-transparent"
+                  placeholder="Type landlord name"
+                  {...form.register("landlord_name")}
+                />
+                {form.formState.errors.landlord_name && (
+                  <span className="text-xs text-red-600">
+                    Enter a landlord name
+                  </span>
+                )}
+              </label>
             </div>
             <label className="grid gap-1">
               <span className="text-sm">Agreement Date</span>
@@ -389,6 +330,19 @@ export default function NewBillPage() {
             Payment & Signature
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label className="grid gap-1">
+              <span className="text-sm">Rate (Rs./P.M)</span>
+              <input
+                className="border rounded px-3 py-2 bg-transparent"
+                placeholder="e.g. 12000"
+                {...form.register("rate")}
+              />
+              {form.formState.errors.rate && (
+                <span className="text-xs text-red-600">
+                  {form.formState.errors.rate.message as string}
+                </span>
+              )}
+            </label>
             <label className="grid gap-1">
               <span className="text-sm">Amount (Rs.)</span>
               <input
