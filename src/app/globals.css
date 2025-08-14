@@ -24,3 +24,9 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Mobile helpers for preview/table spillover */
+.responsive-pane {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
