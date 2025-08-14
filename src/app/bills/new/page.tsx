@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { billFormSchema, type BillFormInput } from "@/lib/validation";
 import { format } from "date-fns";
@@ -14,6 +14,8 @@ import {
   saveBill,
 } from "@/lib/localStore";
 import PdfUpload from "@/components/PdfUpload";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const monthNames = [
   "JANUARY",
@@ -49,7 +51,7 @@ export default function NewBillPage() {
   const form = useForm<BillFormInput>({
     resolver: zodResolver(billFormSchema),
     defaultValues: {
-      bill_mode: "auto",
+      bill_mode: "manual",
       date: format(new Date(), "yyyy-MM-dd"),
       agreement_date: format(new Date(), "yyyy-MM-dd"),
       period: buildPeriodFromDate(new Date()),
@@ -82,9 +84,8 @@ export default function NewBillPage() {
     setSaving(true);
     try {
       let finalBillNumber = values.bill_number ?? "";
-      if (values.bill_mode === "auto") {
-        finalBillNumber = await computeNextBillNumber();
-      } else if (values.bill_mode === "random") {
+      if (!finalBillNumber) {
+        // If no bill number is provided, generate a random one
         finalBillNumber = `BILL-${uuidv4().slice(0, 8).toUpperCase()}`;
       }
 
@@ -247,10 +248,31 @@ export default function NewBillPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="grid gap-1">
               <span className="text-sm">Period (Month)</span>
-              <input
-                type="month"
-                className="border rounded px-3 py-2 bg-transparent"
-                {...form.register("period")}
+              <Controller
+                name="period"
+                control={form.control}
+                render={({ field }) => (
+                  <DatePicker
+                    selected={
+                      field.value ? new Date(field.value + "-01") : null
+                    }
+                    onChange={(date) => {
+                      if (date) {
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(
+                          2,
+                          "0"
+                        );
+                        field.onChange(`${year}-${month}`);
+                      }
+                    }}
+                    dateFormat="MMMM yyyy"
+                    showMonthYearPicker
+                    showFullMonthYearPicker
+                    placeholderText="Select month and year"
+                    className="border rounded px-3 py-2 bg-transparent w-full"
+                  />
+                )}
               />
               {form.formState.errors.period && (
                 <span className="text-xs text-red-600">
@@ -260,10 +282,22 @@ export default function NewBillPage() {
             </label>
             <label className="grid gap-1">
               <span className="text-sm">Bill Date</span>
-              <input
-                type="date"
-                className="border rounded px-3 py-2 bg-transparent"
-                {...form.register("date")}
+              <Controller
+                name="date"
+                control={form.control}
+                render={({ field }) => (
+                  <DatePicker
+                    selected={field.value ? new Date(field.value) : null}
+                    onChange={(date) => {
+                      if (date) {
+                        field.onChange(format(date, "yyyy-MM-dd"));
+                      }
+                    }}
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="Select date"
+                    className="border rounded px-3 py-2 bg-transparent w-full"
+                  />
+                )}
               />
               {form.formState.errors.date && (
                 <span className="text-xs text-red-600">Date is required</span>
@@ -271,37 +305,41 @@ export default function NewBillPage() {
             </label>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+          <div className="grid grid-cols-1 gap-4">
             <label className="grid gap-1">
-              <span className="text-sm">Bill Mode</span>
-              <select
-                className="border rounded px-3 py-2 bg-transparent"
-                {...form.register("bill_mode")}
-                onChange={(e) => {
-                  form.setValue(
-                    "bill_mode",
-                    e.target.value as typeof form.getValues extends never
-                      ? never
-                      : "auto" | "manual" | "random"
-                  );
-                }}
-              >
-                <option value="auto">Auto</option>
-                <option value="manual">Manual</option>
-                <option value="random">Random</option>
-              </select>
-            </label>
-            <label className="grid gap-1 sm:col-span-2">
-              <span className="text-sm">
-                Bill Number{" "}
-                {form.watch("bill_mode") !== "manual" ? "(auto)" : "(manual)"}
-              </span>
-              <input
-                className="border rounded px-3 py-2 bg-transparent"
-                placeholder="Enter bill number"
-                disabled={form.watch("bill_mode") !== "manual"}
-                {...form.register("bill_number")}
-              />
+              <span className="text-sm">Bill Number</span>
+              <div className="relative">
+                <input
+                  className="border rounded px-3 py-2 bg-transparent w-full pr-10"
+                  placeholder="Enter bill number"
+                  {...form.register("bill_number")}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const randomBillNumber = `BILL-${uuidv4()
+                      .slice(0, 8)
+                      .toUpperCase()}`;
+                    form.setValue("bill_number", randomBillNumber);
+                  }}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
+                  title="Generate random bill number"
+                >
+                  <svg
+                    className="w-4 h-4 text-gray-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                </button>
+              </div>
             </label>
           </div>
         </div>
@@ -326,10 +364,22 @@ export default function NewBillPage() {
             </div>
             <label className="grid gap-1">
               <span className="text-sm">Agreement Date</span>
-              <input
-                type="date"
-                className="border rounded px-3 py-2 bg-transparent"
-                {...form.register("agreement_date")}
+              <Controller
+                name="agreement_date"
+                control={form.control}
+                render={({ field }) => (
+                  <DatePicker
+                    selected={field.value ? new Date(field.value) : null}
+                    onChange={(date) => {
+                      if (date) {
+                        field.onChange(format(date, "yyyy-MM-dd"));
+                      }
+                    }}
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="Select agreement date"
+                    className="border rounded px-3 py-2 bg-transparent w-full"
+                  />
+                )}
               />
               {form.formState.errors.agreement_date && (
                 <span className="text-xs text-red-600">
