@@ -118,12 +118,11 @@ export default function PdfUpload({
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1; // getMonth() returns 0-11
 
-    // Get next month
-    const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
-    const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
-
-    // Format period as YYYY-MM
-    const nextPeriod = `${nextYear}-${String(nextMonth).padStart(2, "0")}`;
+    // Format current period as YYYY-MM
+    const currentPeriod = `${currentYear}-${String(currentMonth).padStart(
+      2,
+      "0"
+    )}`;
 
     // Format current date as YYYY-MM-DD
     const currentDate = `${currentYear}-${String(currentMonth).padStart(
@@ -141,7 +140,7 @@ export default function PdfUpload({
 
     return {
       ...lastFields,
-      period: nextPeriod,
+      period: currentPeriod,
       date: currentDate,
       bill_number: nextBillNumber,
     };
