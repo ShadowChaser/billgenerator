@@ -76,6 +76,15 @@ export default function NewBillPage() {
     });
   };
 
+  const handleNextMonthBill = (fields: Partial<BillFormInput>) => {
+    // Set next month fields to form
+    Object.entries(fields).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        form.setValue(key as keyof BillFormInput, value);
+      }
+    });
+  };
+
   async function computeNextBillNumber(): Promise<string> {
     return computeNextNumericBillNumber();
   }
@@ -240,6 +249,7 @@ export default function NewBillPage() {
       >
         <PdfUpload
           onFieldsExtracted={handleFieldsExtracted}
+          onNextMonthBill={handleNextMonthBill}
           disabled={saving}
         />
 

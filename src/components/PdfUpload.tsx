@@ -6,11 +6,13 @@ import { createWorker } from "tesseract.js";
 
 interface PdfUploadProps {
   onFieldsExtracted: (fields: Partial<BillFormInput>) => void;
+  onNextMonthBill?: (fields: Partial<BillFormInput>) => void;
   disabled?: boolean;
 }
 
 export default function PdfUpload({
   onFieldsExtracted,
+  onNextMonthBill,
   disabled,
 }: PdfUploadProps) {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -107,6 +109,42 @@ export default function PdfUpload({
 
     console.log("OCR completed, total text length:", fullText.length);
     return fullText;
+  };
+
+  const generateNextMonthFields = (
+    lastFields: Partial<BillFormInput>
+  ): Partial<BillFormInput> => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // getMonth() returns 0-11
+
+    // Get next month
+    const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+    const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+
+    // Format period as YYYY-MM
+    const nextPeriod = `${nextYear}-${String(nextMonth).padStart(2, "0")}`;
+
+    // Format current date as YYYY-MM-DD
+    const currentDate = `${currentYear}-${String(currentMonth).padStart(
+      2,
+      "0"
+    )}-${String(now.getDate()).padStart(2, "0")}`;
+
+    // Increment bill number
+    let nextBillNumber = "1";
+    if (lastFields.bill_number) {
+      const currentNumber =
+        parseInt(lastFields.bill_number.replace(/\D/g, "")) || 0;
+      nextBillNumber = String(currentNumber + 1);
+    }
+
+    return {
+      ...lastFields,
+      period: nextPeriod,
+      date: currentDate,
+      bill_number: nextBillNumber,
+    };
   };
 
   const extractFieldsFromText = (text: string): Partial<BillFormInput> => {
@@ -231,6 +269,7 @@ export default function PdfUpload({
           const dateStr = `${year}-${month}-${day}`;
           if (!isNaN(Date.parse(dateStr))) {
             extractedFields.date = dateStr;
+            console.log("Found bill date:", dateStr);
             break;
           }
         }
@@ -258,10 +297,17 @@ export default function PdfUpload({
       const monthName = monthNames[i];
       const monthPattern = new RegExp(`${monthName}\\s*-?\\s*(\\d{4})`, "i");
       const match = text.match(monthPattern);
+      console.log(
+        "Trying period pattern:",
+        monthPattern.source,
+        "Match:",
+        match
+      );
       if (match && match[1]) {
         const year = match[1];
         const month = String(i + 1).padStart(2, "0");
         extractedFields.period = `${year}-${month}`;
+        console.log("Found period:", extractedFields.period);
         break;
       }
     }
@@ -282,6 +328,7 @@ export default function PdfUpload({
         const dateStr = `${year}-${month}-${day}`;
         if (!isNaN(Date.parse(dateStr))) {
           extractedFields.agreement_date = dateStr;
+          console.log("Found agreement date:", dateStr);
           break;
         }
       }
@@ -325,6 +372,11 @@ export default function PdfUpload({
         );
       } else {
         onFieldsExtracted(extractedFields);
+        // Save extracted fields to localStorage for next month bill
+        localStorage.setItem(
+          "lastExtractedFields",
+          JSON.stringify(extractedFields)
+        );
         const fieldCount = Object.keys(extractedFields).length;
         setSuccess(
           `Successfully extracted ${fieldCount} field(s) from the PDF!`
@@ -374,6 +426,24 @@ export default function PdfUpload({
         {error && <div className="text-sm text-red-600">{error}</div>}
 
         {success && <div className="text-sm text-green-600">{success}</div>}
+
+        {success && onNextMonthBill && (
+          <button
+            type="button"
+            onClick={() => {
+              // Get the last extracted fields and create next month data
+              const lastExtractedFields = JSON.parse(
+                localStorage.getItem("lastExtractedFields") || "{}"
+              );
+              const nextMonthFields =
+                generateNextMonthFields(lastExtractedFields);
+              onNextMonthBill(nextMonthFields);
+            }}
+            className="mt-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
+          >
+            📅 Next Month Bill
+          </button>
+        )}
 
         <div className="text-xs text-gray-500">
           Upload a PDF bill to automatically extract and fill in the form
