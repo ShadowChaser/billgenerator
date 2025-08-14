@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { billFormSchema, type BillFormInput } from "@/lib/validation";
@@ -13,6 +13,7 @@ import {
   saveLandlord,
   saveBill,
 } from "@/lib/localStore";
+import PdfUpload from "@/components/PdfUpload";
 
 const monthNames = [
   "JANUARY",
@@ -63,6 +64,15 @@ export default function NewBillPage() {
   }, [form]);
 
   const landlordNameManual = form.watch("landlord_name")?.trim() ?? "";
+
+  const handleFieldsExtracted = (fields: Partial<BillFormInput>) => {
+    // Set extracted fields to form
+    Object.entries(fields).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        form.setValue(key as keyof BillFormInput, value);
+      }
+    });
+  };
 
   async function computeNextBillNumber(): Promise<string> {
     return computeNextNumericBillNumber();
@@ -227,6 +237,11 @@ export default function NewBillPage() {
         className="grid gap-6 max-w-3xl"
         onSubmit={form.handleSubmit(onSubmit)}
       >
+        <PdfUpload
+          onFieldsExtracted={handleFieldsExtracted}
+          disabled={saving}
+        />
+
         <div className="rounded-md border p-4 grid gap-4">
           <div className="text-sm font-semibold opacity-80">Bill details</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

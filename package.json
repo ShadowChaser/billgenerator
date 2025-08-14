@@ -16,9 +16,12 @@
     "html2pdf.js": "^0.10.3",
     "jspdf": "^3.0.1",
     "next": "15.4.6",
+    "pdf-parse": "^1.1.1",
+    "pdfjs-dist": "^5.4.54",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.62.0",
+    "tesseract.js": "^6.0.1",
     "uuid": "^11.1.0",
     "zod": "^4.0.17"
   },
