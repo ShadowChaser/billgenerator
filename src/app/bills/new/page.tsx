@@ -56,7 +56,7 @@ export default function NewBillPage() {
   );
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const form = useForm<BillFormInput>({
+  const form = useForm({
     resolver: zodResolver(billFormSchema),
     defaultValues: {
       bill_mode: "manual",
@@ -67,6 +67,263 @@ export default function NewBillPage() {
       landlord_name: "",
     },
   });
+
+  // Templates from Advanced Editor (localStorage) with fields
+  type TemplateField = {
+    id: string;
+    label: string;
+    value?: string;
+    type: "text" | "number" | "date" | "amount" | "textarea" | "select" | "image" | "signature";
+    placeholder?: string;
+    options?: string[];
+    required?: boolean;
+    // layout/style from advanced editor (optional)
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    fontSize?: number;
+    isBold?: boolean;
+    isItalic?: boolean;
+    textColor?: string;
+    backgroundColor?: string;
+    borderColor?: string;
+    borderWidth?: number;
+    borderRadius?: number;
+    alignment?: "left" | "center" | "right";
+  };
+  type FullTemplate = {
+    id: string;
+    name: string;
+    description?: string;
+    width?: number;
+    height?: number;
+    fields: TemplateField[];
+  };
+  const [templates, setTemplates] = useState<FullTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const selectedTemplate = templates.find((t) => t.id === selectedTemplateId) || null;
+  const [templateForm, setTemplateForm] = useState<Record<string, string>>({});
+  const [templateErrors, setTemplateErrors] = useState<string[]>([]);
+
+  // Map templateForm values into the existing bill form so that validation and onSubmit work
+  const syncTemplateToForm = () => {
+    if (!selectedTemplate) return;
+    // Always ensure some defaults
+    form.setValue("bill_mode", "manual");
+    form.setValue("landlord_mode", form.getValues("landlord_mode") || "manual");
+
+    for (const f of selectedTemplate.fields) {
+      const raw = (templateForm[f.id] ?? "").toString().trim();
+      if (!raw) continue;
+      const lbl = (f.label || "").toLowerCase();
+
+      // signature
+      if ((f.type === "signature" || f.type === "image") && raw.startsWith("data:")) {
+        form.setValue("signature_url", raw);
+        continue;
+      }
+
+      // amount
+      if (lbl.includes("amount")) {
+        const digits = raw.replace(/[^0-9.\-]/g, "");
+        if (digits) form.setValue("amount", digits);
+        continue;
+      }
+
+      // rate
+      if (lbl.includes("rate")) {
+        const digits = raw.replace(/[^0-9.\-]/g, "");
+        if (digits) form.setValue("rate", digits);
+        continue;
+      }
+
+      // landlord name
+      if (lbl.includes("landlord") && !lbl.includes("id")) {
+        form.setValue("landlord_mode", "manual");
+        form.setValue("landlord_name", raw);
+        continue;
+      }
+
+      // period / month (expects YYYY-MM)
+      if (lbl.includes("period") || lbl.includes("month")) {
+        const normalized = (() => {
+          // Try direct YYYY-MM
+          const m1 = raw.match(/(20\d{2})[-\/](0?[1-9]|1[0-2])/);
+          if (m1) return `${m1[1]}-${String(m1[2]).padStart(2, "0")}`;
+          // Try Month-YYYY
+          const m2 = raw.match(/([a-zA-Z]+)[^0-9]*(20\d{2})/);
+          if (m2) {
+            const monthNamesLower = [
+              "january","february","march","april","may","june",
+              "july","august","september","october","november","december",
+            ];
+            const idx = monthNamesLower.indexOf(m2[1].toLowerCase());
+            if (idx >= 0) return `${m2[2]}-${String(idx + 1).padStart(2, "0")}`;
+          }
+          return "";
+        })();
+        if (normalized) form.setValue("period", normalized);
+        continue;
+      }
+
+      // bill date
+      if (lbl === "date" || lbl.includes("bill date")) {
+        const d = new Date(raw);
+        if (!isNaN(d.getTime())) {
+          form.setValue("date", format(d, "yyyy-MM-dd"));
+        }
+        continue;
+      }
+
+      // agreement date
+      if (lbl.includes("agreement") && lbl.includes("date")) {
+        const d = new Date(raw);
+        if (!isNaN(d.getTime())) {
+          form.setValue("agreement_date", format(d, "yyyy-MM-dd"));
+        }
+        continue;
+      }
+    }
+  };
+
+  const submitFromTemplate = async () => {
+    setTemplateErrors([]);
+    syncTemplateToForm();
+    // Wait for RHF to register values and validate
+    await new Promise((r) => setTimeout(r, 0));
+    const ok = await form.trigger();
+    if (ok) {
+      form.handleSubmit(onSubmit)();
+    } else {
+      const errs = Object.entries(form.formState.errors).map(([k, v]) => `${k}: ${(v as any)?.message || "Invalid"}`);
+      setTemplateErrors(errs);
+      // Scroll to top of template section if needed
+      if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const raw = window.localStorage.getItem("hrb_templates_v1");
+        if (raw) {
+          const arr = JSON.parse(raw);
+          if (Array.isArray(arr)) {
+            setTemplates(
+              arr.map((t: any) => ({
+                id: String(t.id ?? ""),
+                name: String(t.name ?? "Unnamed Template"),
+                description: typeof t.description === "string" ? t.description : undefined,
+                width: typeof t.width === "number" ? t.width : undefined,
+                height: typeof t.height === "number" ? t.height : undefined,
+                fields: Array.isArray(t.fields) ? t.fields.map((f: any) => ({
+                  id: String(f.id ?? ""),
+                  label: String(f.label ?? "Field"),
+                  value: typeof f.value === "string" ? f.value : "",
+                  type: (
+                    f.type === "text" ||
+                    f.type === "number" ||
+                    f.type === "date" ||
+                    f.type === "amount" ||
+                    f.type === "textarea" ||
+                    f.type === "select" ||
+                    f.type === "image" ||
+                    f.type === "signature"
+                  )
+                    ? (f.type as TemplateField["type"]) : "text",
+                  placeholder: typeof f.placeholder === "string" ? f.placeholder : undefined,
+                  options: Array.isArray(f.options) ? f.options.map((o: any) => String(o)) : undefined,
+                  required: Boolean(f.required),
+                  x: typeof f.x === "number" ? f.x : undefined,
+                  y: typeof f.y === "number" ? f.y : undefined,
+                  width: typeof f.width === "number" ? f.width : undefined,
+                  height: typeof f.height === "number" ? f.height : undefined,
+                  fontSize: typeof f.fontSize === "number" ? f.fontSize : undefined,
+                  isBold: Boolean(f.isBold),
+                  isItalic: Boolean(f.isItalic),
+                  textColor: typeof f.textColor === "string" ? f.textColor : undefined,
+                  backgroundColor: typeof f.backgroundColor === "string" ? f.backgroundColor : undefined,
+                  borderColor: typeof f.borderColor === "string" ? f.borderColor : undefined,
+                  borderWidth: typeof f.borderWidth === "number" ? f.borderWidth : undefined,
+                  borderRadius: typeof f.borderRadius === "number" ? f.borderRadius : undefined,
+                  alignment: f.alignment === "center" || f.alignment === "right" ? f.alignment : "left",
+                })) : [],
+              }))
+            );
+          }
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Build HTML for a selected template using absolute positioning
+  const buildTemplatePreviewHtml = (tpl: FullTemplate, values: Record<string, string>) => {
+    const baseWidth = 794; // A4 target width used in export
+    const tplWidth = Math.max(1, tpl.width ?? 794);
+    const tplHeight = Math.max(1, tpl.height ?? 1123);
+    const scale = baseWidth / tplWidth;
+    const scaledHeight = Math.round(tplHeight * scale);
+    const safePad = 16; // px padding to keep content away from page edge
+
+    const esc = (s: string) => s
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+    const fieldHtml = (tpl.fields || []).map((f) => {
+      const v = values[f.id] ?? f.value ?? "";
+      const left = Math.round((f.x ?? 0) * scale);
+      const top = Math.round((f.y ?? 0) * scale);
+      const w = Math.round((f.width ?? 120) * scale);
+      const h = Math.round((f.height ?? 24) * scale);
+      const fs = Math.max(10, Math.round((f.fontSize ?? 14) * scale));
+      const fw = f.isBold ? "bold" : "normal";
+      const fi = f.isItalic ? "italic" : "normal";
+      const ta = f.alignment ?? "left";
+      const tc = f.textColor ?? "#000000";
+      const bg = f.backgroundColor ? `background:${f.backgroundColor};` : "";
+      const bw = Math.max(0, Math.round((f.borderWidth ?? 0) * scale));
+      const bc = f.borderColor ?? "transparent";
+      const br = Math.round((f.borderRadius ?? 0) * scale);
+
+      if (f.type === "image" || f.type === "signature") {
+        const src = typeof v === "string" ? v : "";
+        return `\n<div style=\"position:absolute;left:${left}px;top:${top}px;width:${w}px;height:${h}px;${bg}border:${bw}px solid ${bc};border-radius:${br}px;overflow:hidden;\">` +
+               (src ? `<img src=\"${esc(src)}\" style=\"width:100%;height:100%;object-fit:contain;\"/>` : "") +
+               `</div>`;
+      }
+
+      const text = esc(String(v ?? ""));
+      return `\n<div style=\"position:absolute;left:${left}px;top:${top}px;width:${w}px;height:${h}px;${bg}border:${bw}px solid ${bc};border-radius:${br}px;display:flex;align-items:flex-start;justify-content:${ta === "left" ? "flex-start" : ta === "center" ? "center" : "flex-end"};padding:4px 6px;overflow:hidden;box-sizing:border-box;\">` +
+             `<div style=\"width:100%;color:${tc};font-size:${fs}px;font-weight:${fw};font-style:${fi};text-align:${ta};white-space:pre-wrap;word-break:break-word;line-height:1.25;\">${text}</div>` +
+             `</div>`;
+    }).join("");
+
+    return `<!DOCTYPE html><html><head><meta charset=\"utf-8\"/>` +
+      `<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"/>` +
+      `</head><body style=\"margin:0;background:#f3f4f6;\">` +
+      `<div style=\"width:${baseWidth}px;height:${scaledHeight}px;margin:0 auto;background:#ffffff;\">` +
+      `<div style=\"position:relative;width:${baseWidth - safePad * 2}px;height:${scaledHeight - safePad * 2}px;margin:${safePad}px;box-sizing:border-box;\">` +
+      `${fieldHtml}` +
+      `</div>` +
+      `</div>` +
+      `</body></html>`;
+  };
+
+  // Initialize dynamic field values whenever a new template is selected
+  useEffect(() => {
+    if (selectedTemplate) {
+      const init: Record<string, string> = {};
+      selectedTemplate.fields.forEach((f) => {
+        init[f.id] = (f.value ?? "").toString();
+      });
+      setTemplateForm(init);
+    } else {
+      setTemplateForm({});
+    }
+  }, [selectedTemplateId]);
 
   useEffect(() => {
     const list = getLandlordsLocal();
@@ -158,9 +415,18 @@ export default function NewBillPage() {
     return computeNextNumericBillNumber();
   }
 
-  async function onSubmit(values: BillFormInput) {
+  async function onSubmit(values: any) {
     setSaving(true);
     try {
+      // If a template is selected, build preview from template JSON and templateForm
+      // This bypasses the default bill HTML rendering
+      if (selectedTemplate) {
+        const html = buildTemplatePreviewHtml(selectedTemplate, templateForm);
+        setPreviewHtml(html);
+        setSaving(false);
+        return;
+      }
+
       let finalBillNumber = values.bill_number ?? "";
       if (!finalBillNumber) {
         // If no bill number is provided, generate a random one
@@ -300,8 +566,10 @@ export default function NewBillPage() {
     const html2pdf = (await import("html2pdf.js")).default;
     const element = document.createElement("div");
     element.innerHTML = previewHtml;
-    // Fix width to A4 at ~96dpi for sharper rasterization
-    element.style.width = "794px"; // 210mm ≈ 794px @96dpi
+    // Fix width to A4 @ ~96dpi for sharper rasterization
+    const baseWidthPx = 794;   // ~210mm at 96dpi
+    const pageHeightPx = 1123; // ~297mm at 96dpi
+    element.style.width = `${baseWidthPx}px`;
     element.style.margin = "0 auto";
     element.style.background = "#ffffff";
     document.body.appendChild(element);
@@ -309,23 +577,29 @@ export default function NewBillPage() {
     await html2pdf()
       .from(element)
       .set({
-        margin: 0,
+        // Small margins in px to avoid edge clipping
+        margin: [16, 16, 16, 16],
         filename: `house-rent-bill-${Date.now()}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: {
-          scale,
+          scale, // high DPI render
           useCORS: true,
           scrollX: 0,
           scrollY: 0,
           backgroundColor: "#ffffff",
+          // Ensure full element dimensions are captured to prevent right-edge clipping
+          windowWidth: element.scrollWidth,
+          windowHeight: element.scrollHeight,
         },
         jsPDF: {
-          unit: "mm",
-          format: "a4",
+          // Use pixel units to exactly match our HTML pixel width
+          unit: "px",
+          format: [baseWidthPx, pageHeightPx],
           orientation: "portrait",
           compress: true,
         },
-        pagebreak: { mode: ["css", "avoid-all"] },
+        // Respect CSS page breaks and fallback to legacy if needed
+        pagebreak: { mode: ["css", "legacy"] },
       })
       .save();
     element.remove();
@@ -335,19 +609,184 @@ export default function NewBillPage() {
     <div className="grid gap-6 max-w-5xl mx-auto px-3 sm:px-4 pt-6 sm:pt-8 pb-10 sm:pb-12 overflow-x-hidden min-w-0">
       <h1 className="text-2xl font-semibold">House Rent Bill</h1>
 
-      <form
-        className="grid gap-6 w-full max-w-3xl mx-auto min-w-0 break-words"
-        onSubmit={form.handleSubmit(onSubmit)}
-      >
-        <div className="overflow-visible">
-          <PdfUpload
-            onFieldsExtracted={handleFieldsExtracted}
-            onNextMonthBill={handleNextMonthBill}
-            disabled={saving}
-          />
-        </div>
+      {/* Template (optional) selector */}
+      <div className="rounded-md ring-1 ring-inset p-3 sm:p-4 grid gap-3 w-full max-w-3xl mx-auto">
+        <div className="text-sm font-semibold opacity-80">Template (optional)</div>
+        <label className="grid gap-1">
+          <span className="text-sm">Choose a saved template</span>
+          <select
+            className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
+            value={selectedTemplateId}
+            onChange={(e) => setSelectedTemplateId(e.target.value)}
+          >
+            <option value="">— None (use default House Bill) —</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+        </label>
+      </div>
 
-        <div className="rounded-md ring-1 ring-inset p-3 sm:p-4 grid gap-3 sm:gap-4">
+      {/* If a template is selected, show template UI + PdfUpload; else show the original form unchanged */}
+      {selectedTemplateId ? (
+        <div className="grid gap-4 w-full max-w-3xl mx-auto">
+          {(() => {
+            const tpl = selectedTemplate;
+            return (
+              <div className="rounded-md ring-1 ring-inset p-3 sm:p-4 grid gap-2">
+                <div className="text-sm font-semibold">Selected Template</div>
+                <div className="text-base font-medium">{tpl?.name ?? "Template"}</div>
+                {tpl?.description && (
+                  <div className="text-sm opacity-80">{tpl.description}</div>
+                )}
+              </div>
+            );
+          })()}
+
+          <div className="overflow-visible">
+            <PdfUpload
+              onFieldsExtracted={handleFieldsExtracted}
+              onNextMonthBill={handleNextMonthBill}
+              disabled={saving}
+            />
+          </div>
+
+          {/* Dynamic fields for selected template */}
+          {selectedTemplate && (
+            <div className="rounded-md ring-1 ring-inset p-3 sm:p-4 grid gap-3">
+              <div className="text-sm font-semibold opacity-80">Template Fields</div>
+              <div className="grid grid-cols-1 gap-3">
+                {selectedTemplate.fields.map((f) => {
+                  const val = templateForm[f.id] ?? "";
+                  const setVal = (v: string) => setTemplateForm((prev) => ({ ...prev, [f.id]: v }));
+                  if (f.type === "textarea") {
+                    return (
+                      <label key={f.id} className="grid gap-1">
+                        <span className="text-sm">{f.label}</span>
+                        <textarea
+                          className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full min-h-[84px]"
+                          placeholder={f.placeholder}
+                          value={val}
+                          onChange={(e) => setVal(e.target.value)}
+                        />
+                      </label>
+                    );
+                  }
+                  if (f.type === "select" && Array.isArray(f.options)) {
+                    return (
+                      <label key={f.id} className="grid gap-1">
+                        <span className="text-sm">{f.label}</span>
+                        <select
+                          className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
+                          value={val}
+                          onChange={(e) => setVal(e.target.value)}
+                        >
+                          <option value="">Select...</option>
+                          {f.options.map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      </label>
+                    );
+                  }
+                  if (f.type === "image" || f.type === "signature") {
+                    return (
+                      <label key={f.id} className="grid gap-1">
+                        <span className="text-sm">{f.label} ({f.type})</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = () => setVal(String(reader.result ?? ""));
+                            reader.readAsDataURL(file);
+                          }}
+                        />
+                        {val && (
+                          <span className="text-xs opacity-70">Image selected</span>
+                        )}
+                      </label>
+                    );
+                  }
+                  // text, number, date, amount -> map to input
+                  const inputType = f.type === "date" ? "date" : f.type === "number" || f.type === "amount" ? "number" : "text";
+                  return (
+                    <label key={f.id} className="grid gap-1">
+                      <span className="text-sm">{f.label}</span>
+                      <input
+                        className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
+                        type={inputType}
+                        placeholder={f.placeholder}
+                        value={val}
+                        onChange={(e) => setVal(e.target.value)}
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <button
+              type="button"
+              className="px-3 py-2 rounded ring-1 ring-inset"
+              onClick={() => setSelectedTemplateId("")}
+            >
+              Back to default form
+            </button>
+          </div>
+
+          {/* Validation summary for template mode */}
+          {templateErrors.length > 0 && (
+            <div className="rounded-md ring-1 ring-red-500/40 bg-red-500/5 p-3 sm:p-4">
+              <div className="text-sm font-semibold text-red-600 mb-1">Please fix the following:</div>
+              <ul className="list-disc pl-5 text-sm text-red-700 space-y-0.5">
+                {templateErrors.map((e, i) => (
+                  <li key={i}>{e}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Actions (use the same submit/preview pipeline) */}
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
+            <button
+              type="button"
+              disabled={saving}
+              className="px-4 py-2 rounded bg-foreground text-background disabled:opacity-50 w-full sm:w-auto"
+              onClick={submitFromTemplate}
+            >
+              {saving ? "Saving..." : "Save & Preview"}
+            </button>
+            {previewHtml && (
+              <button
+                type="button"
+                onClick={exportPdf}
+                className="px-4 py-2 rounded ring-1 ring-inset w-full sm:w-auto"
+              >
+                Download PDF
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <form
+          className="grid gap-6 w-full max-w-3xl mx-auto min-w-0 break-words"
+          onSubmit={form.handleSubmit(onSubmit)}
+        >
+          <div className="overflow-visible">
+            <PdfUpload
+              onFieldsExtracted={handleFieldsExtracted}
+              onNextMonthBill={handleNextMonthBill}
+              disabled={saving}
+            />
+          </div>
+
+          <div className="rounded-md ring-1 ring-inset p-3 sm:p-4 grid gap-3 sm:gap-4">
           <div className="text-sm font-semibold opacity-80">Bill details</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 min-w-0">
             <label className="grid gap-1">
@@ -639,6 +1078,8 @@ export default function NewBillPage() {
           )}
         </div>
       </form>
+
+      )}
 
       {previewHtml && (
         <div className="mt-6 ring-1 ring-inset rounded p-2 sm:p-4 responsive-pane w-full max-w-3xl mx-auto">
