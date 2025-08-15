@@ -672,12 +672,24 @@ export default function AdvancedBillGeneratorPage() {
   useEffect(() => {
     const updateCanvasSize = () => {
       if (typeof window !== "undefined" && currentTemplate) {
-        const maxWidth = Math.min(currentTemplate.width, window.innerWidth - 32);
-        const maxHeight = Math.min(currentTemplate.height, window.innerHeight * 0.6);
-        setCanvasContainerSize({
-          width: Math.max(maxWidth, Math.min(currentTemplate.width, 320)),
-          height: Math.max(maxHeight, Math.min(currentTemplate.height, 240)),
-        });
+        // Available space in the editor area
+        const availW = Math.max(320, window.innerWidth - 32);
+        // Use a larger height fraction on taller screens to avoid a tiny preview
+        const baseH = window.innerHeight;
+        const heightFrac = baseH >= 1000 ? 0.85 : baseH >= 800 ? 0.75 : 0.65;
+        const availH = Math.max(240, Math.floor(baseH * heightFrac));
+
+        // Maintain template aspect ratio by using a uniform scale
+        const scale = Math.min(
+          availW / currentTemplate.width,
+          availH / currentTemplate.height,
+          1
+        );
+
+        const width = Math.round(currentTemplate.width * scale);
+        const height = Math.round(currentTemplate.height * scale);
+
+        setCanvasContainerSize({ width, height });
       }
     };
 
@@ -865,8 +877,11 @@ export default function AdvancedBillGeneratorPage() {
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const scaleX = rect.width / canvas.width;
-    const scaleY = rect.height / canvas.height;
+    // Map template units to CSS pixels for overlay placement
+    const tplW = currentTemplate?.width || rect.width;
+    const tplH = currentTemplate?.height || rect.height;
+    const scaleX = rect.width / tplW;
+    const scaleY = rect.height / tplH;
 
     setInlineEditField(field);
     setInlineEditValue(field.value || "");
@@ -912,12 +927,55 @@ export default function AdvancedBillGeneratorPage() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Clear
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Improve sharpness: match backing store to displayed CSS size * DPR
+    const dpr = typeof window !== "undefined" ? Math.max(1, window.devicePixelRatio || 1) : 1;
+    // Compute display scale based on container size vs template size
+    const cssW = (canvasContainerSize?.width ?? currentTemplate.width);
+    const cssH = (canvasContainerSize?.height ?? currentTemplate.height);
+    const displayScaleX = cssW / currentTemplate.width;
+    const displayScaleY = cssH / currentTemplate.height;
+    // Because we keep aspect ratio, these should be equal, but be safe
+    const displayScale = Math.min(displayScaleX, displayScaleY);
+
+    // Set canvas CSS size explicitly
+    canvas.style.width = `${Math.round(currentTemplate.width * displayScale)}px`;
+    canvas.style.height = `${Math.round(currentTemplate.height * displayScale)}px`;
+
+    // Set backing resolution to CSS size * DPR
+    const desiredW = Math.max(1, Math.floor(currentTemplate.width * displayScale * dpr));
+    const desiredH = Math.max(1, Math.floor(currentTemplate.height * displayScale * dpr));
+    if (canvas.width !== desiredW || canvas.height !== desiredH) {
+      canvas.width = desiredW;
+      canvas.height = desiredH;
+    }
+    // Reset transform and scale drawing from template units to backing store
+    ctx.setTransform(displayScale * dpr, 0, 0, displayScale * dpr, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    try { (ctx as any).imageSmoothingQuality = "high"; } catch {}
+
+    // Helper: snap to device pixel grid for crisp 1px strokes
+    const px = 1 / (displayScale * dpr);
+    const snap = (v: number) => Math.round(v * displayScale * dpr) / (displayScale * dpr);
+    const strokeAlignedRect = (
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+      lineWidth: number
+    ) => {
+      // Align the rect to pixel grid and offset by half the stroke width
+      const lw = Math.max(px, lineWidth);
+      ctx.lineWidth = lw;
+      const offs = lw / 2;
+      ctx.strokeRect(snap(x) + offs, snap(y) + offs, Math.max(px, snap(w) - lw), Math.max(px, snap(h) - lw));
+    };
+
+    // Clear using template-space units
+    ctx.clearRect(0, 0, currentTemplate.width, currentTemplate.height);
 
     // Background
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, currentTemplate.width, currentTemplate.height);
 
     // Draw fields
     for (const field of currentTemplate.fields) {
@@ -928,8 +986,13 @@ export default function AdvancedBillGeneratorPage() {
         ctx.fillStyle = field.backgroundColor || "#ffffff";
         ctx.fillRect(field.x, field.y, field.width, field.height);
         ctx.strokeStyle = field.borderColor || "#e5e7eb";
-        ctx.lineWidth = field.borderWidth || 1;
-        ctx.strokeRect(field.x, field.y, field.width, field.height);
+        strokeAlignedRect(
+          field.x,
+          field.y,
+          field.width,
+          field.height,
+          (field.borderWidth || 1) * 1
+        );
       }
 
       if (field.type === "image" || field.type === "signature") {
@@ -1055,30 +1118,20 @@ export default function AdvancedBillGeneratorPage() {
             const dh = Math.max(1, Math.floor(ih * scale));
             const dx = field.x + (field.width - dw) / 2;
             const dy = field.y + (field.height - dh) / 2;
-            ctx.strokeRect(dx - 2, dy - 2, dw + 4, dh + 4);
+            strokeAlignedRect(dx - 2, dy - 2, dw + 4, dh + 4, 2);
           } else {
             // If image not loaded yet, use full field area
-            ctx.strokeRect(
-              field.x - 2,
-              field.y - 2,
-              field.width + 4,
-              field.height + 4
-            );
+            strokeAlignedRect(field.x - 2, field.y - 2, field.width + 4, field.height + 4, 2);
           }
         } else {
-          ctx.strokeRect(
-            field.x - 2,
-            field.y - 2,
-            field.width + 4,
-            field.height + 4
-          );
+          strokeAlignedRect(field.x - 2, field.y - 2, field.width + 4, field.height + 4, 2);
         }
 
         ctx.setLineDash([]);
         drawResizeHandles(ctx, field);
       }
     }
-  }, [currentTemplate, selectedField]);
+  }, [currentTemplate, selectedField, canvasContainerSize]);
 
   useEffect(() => {
     renderTemplate();
@@ -1111,18 +1164,20 @@ export default function AdvancedBillGeneratorPage() {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
 
-    // Calculate scale factors in case of any CSS scaling
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    // Map from CSS pixels to template coordinate space (ignore DPR)
+    const tplW = currentTemplate?.width || rect.width;
+    const tplH = currentTemplate?.height || rect.height;
+    const scaleX = tplW / rect.width;
+    const scaleY = tplH / rect.height;
 
-    // Get mouse position relative to canvas
+    // Get mouse position relative to canvas (template units)
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    // Ensure coordinates are within canvas bounds
+    // Ensure coordinates are within template bounds
     return {
-      x: Math.max(0, Math.min(x, canvas.width)),
-      y: Math.max(0, Math.min(y, canvas.height)),
+      x: Math.max(0, Math.min(x, tplW)),
+      y: Math.max(0, Math.min(y, tplH)),
     };
   };
 
@@ -2441,8 +2496,6 @@ export default function AdvancedBillGeneratorPage() {
                 style={{
                   width: canvasContainerSize?.width || currentTemplate.width,
                   height: canvasContainerSize?.height || currentTemplate.height,
-                  minWidth: Math.min(currentTemplate.width, 320),
-                  minHeight: Math.min(currentTemplate.height, 240),
                 }}
               >
                 <canvas
