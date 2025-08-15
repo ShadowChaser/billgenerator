@@ -65,9 +65,20 @@ export default function Home() {
           >
             <Link
               href="/bills/new"
-              className="px-6 py-3 rounded-md bg-foreground text-background text-base font-medium shadow hover:opacity-90 transition w-full sm:w-auto"
+              className="relative overflow-hidden px-6 py-3 rounded-md text-base font-medium shadow transition w-full sm:w-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
             >
-              Generate Bill
+              <motion.span
+                aria-hidden
+                className="absolute inset-0 rounded-md"
+                style={{
+                  background:
+                    "linear-gradient(90deg, rgba(59,130,246,0.7) 0%, rgba(45,212,191,0.7) 50%, rgba(99,102,241,0.7) 100%)",
+                  backgroundSize: "250% 100%",
+                }}
+                animate={{ backgroundPosition: ["0% 0%", "100% 0%"] }}
+                transition={{ duration: 3.2, ease: "linear", repeat: Infinity }}
+              />
+              <span className="relative z-10 text-white">Generate Bill</span>
             </Link>
             <Link
               href="/bills"
@@ -200,9 +211,20 @@ export default function Home() {
             <div className="flex w-full sm:w-auto flex-col sm:flex-row gap-3">
               <Link
                 href="/bills/new"
-                className="px-5 py-2.5 rounded-md bg-white text-blue-700 font-medium shadow hover:opacity-90 transition w-full sm:w-auto"
+                className="relative overflow-hidden px-5 py-2.5 rounded-md font-medium shadow transition w-full sm:w-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
               >
-                Create Bill
+                <motion.span
+                  aria-hidden
+                  className="absolute inset-0 rounded-md"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, rgba(59,130,246,0.7) 0%, rgba(45,212,191,0.7) 50%, rgba(99,102,241,0.7) 100%)",
+                    backgroundSize: "250% 100%",
+                  }}
+                  animate={{ backgroundPosition: ["0% 0%", "100% 0%"] }}
+                  transition={{ duration: 3.2, ease: "linear", repeat: Infinity }}
+                />
+                <span className="relative z-10 text-white">Create Bill</span>
               </Link>
               <Link
                 href="/bills/advanced"
