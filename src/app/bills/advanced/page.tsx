@@ -583,6 +583,10 @@ export default function AdvancedBillGeneratorPage() {
 
   // Canvas
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [canvasContainerSize, setCanvasContainerSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
 
   // Drag to move
   const [isDragging, setIsDragging] = useState(false);
@@ -663,6 +667,26 @@ export default function AdvancedBillGeneratorPage() {
       }
     }
   }, [templates, currentTemplate]);
+
+  // Calculate responsive canvas container size
+  useEffect(() => {
+    const updateCanvasSize = () => {
+      if (typeof window !== "undefined" && currentTemplate) {
+        const maxWidth = Math.min(currentTemplate.width, window.innerWidth - 32);
+        const maxHeight = Math.min(currentTemplate.height, window.innerHeight * 0.6);
+        setCanvasContainerSize({
+          width: Math.max(maxWidth, Math.min(currentTemplate.width, 320)),
+          height: Math.max(maxHeight, Math.min(currentTemplate.height, 240)),
+        });
+      }
+    };
+
+    updateCanvasSize();
+    if (typeof window !== "undefined") {
+      window.addEventListener('resize', updateCanvasSize);
+      return () => window.removeEventListener('resize', updateCanvasSize);
+    }
+  }, [currentTemplate]);
 
   // Persist last-opened template id
   useEffect(() => {
@@ -1242,8 +1266,40 @@ export default function AdvancedBillGeneratorPage() {
     return null;
   };
 
-  // Mouse handlers
-  const handleMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
+  // Touch event handlers
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const mouseEvent = {
+      ...e,
+      clientX: touch.clientX,
+      clientY: touch.clientY,
+      button: 0,
+      buttons: 1,
+    } as any;
+    handleMouseDown(mouseEvent);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const mouseEvent = {
+      ...e,
+      clientX: touch.clientX,
+      clientY: touch.clientY,
+      button: 0,
+      buttons: 1,
+    } as any;
+    handleMouseMove(mouseEvent);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    handleMouseUp();
+  };
+
+  // Mouse/touch event handlers
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isEditing || !currentTemplate) return;
 
     // Cancel inline editing if clicking elsewhere
@@ -1252,7 +1308,7 @@ export default function AdvancedBillGeneratorPage() {
       return;
     }
 
-    const { x, y } = getMousePos(event);
+    const { x, y } = getMousePos(e);
     const field = hitTest(x, y);
 
     if (field) {
@@ -2379,14 +2435,14 @@ export default function AdvancedBillGeneratorPage() {
             </div>
 
             {/* Template Canvas */}
-            <div className="flex justify-center mb-4 md:mb-6 overflow-auto">
+            <div className="flex justify-center mb-4 md:mb-6 overflow-auto px-2">
               <div
-                className="relative bg-white border border-gray-200 rounded-md shadow-sm"
+                className="relative bg-white border border-gray-200 rounded-md shadow-sm max-w-full"
                 style={{
-                  width: currentTemplate.width,
-                  height: currentTemplate.height,
-                  minWidth: currentTemplate.width,
-                  minHeight: currentTemplate.height,
+                  width: canvasContainerSize?.width || currentTemplate.width,
+                  height: canvasContainerSize?.height || currentTemplate.height,
+                  minWidth: Math.min(currentTemplate.width, 320),
+                  minHeight: Math.min(currentTemplate.height, 240),
                 }}
               >
                 <canvas
@@ -2397,6 +2453,9 @@ export default function AdvancedBillGeneratorPage() {
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
                   onClick={handleCanvasClick}
                   onDoubleClick={handleDoubleClick}
                   style={{
@@ -2410,10 +2469,10 @@ export default function AdvancedBillGeneratorPage() {
                   <div
                     className="fixed z-50"
                     style={{
-                      left: inlineEditPosition.x,
-                      top: inlineEditPosition.y,
-                      width: inlineEditPosition.width,
-                      height: inlineEditPosition.height,
+                      left: typeof window !== "undefined" ? Math.max(8, Math.min(inlineEditPosition.x, window.innerWidth - inlineEditPosition.width - 8)) : inlineEditPosition.x,
+                      top: typeof window !== "undefined" ? Math.max(8, Math.min(inlineEditPosition.y, window.innerHeight - inlineEditPosition.height - 8)) : inlineEditPosition.y,
+                      width: typeof window !== "undefined" ? Math.min(inlineEditPosition.width, window.innerWidth - 16) : inlineEditPosition.width,
+                      height: typeof window !== "undefined" ? Math.min(inlineEditPosition.height, window.innerHeight - 16) : inlineEditPosition.height,
                     }}
                   >
                     {inlineEditField.type === "textarea" ? (
@@ -2425,7 +2484,7 @@ export default function AdvancedBillGeneratorPage() {
                         onChange={(e) => setInlineEditValue(e.target.value)}
                         onKeyDown={handleInlineKeyDown}
                         onBlur={finishInlineEdit}
-                        className="w-full h-full p-2 text-sm border-2 border-blue-500 rounded resize-none"
+                        className="w-full h-full p-2 text-sm border-2 border-blue-500 rounded resize-none touch-manipulation"
                         style={{
                           fontSize: `${
                             (inlineEditField.fontSize || 16) *
@@ -2453,7 +2512,7 @@ export default function AdvancedBillGeneratorPage() {
                         onChange={(e) => setInlineEditValue(e.target.value)}
                         onKeyDown={handleInlineKeyDown}
                         onBlur={finishInlineEdit}
-                        className="w-full h-full p-2 text-sm border-2 border-blue-500 rounded"
+                        className="w-full h-full p-2 text-sm border-2 border-blue-500 rounded touch-manipulation"
                         style={{
                           fontSize: `${
                             (inlineEditField.fontSize || 16) *
@@ -2491,11 +2550,11 @@ export default function AdvancedBillGeneratorPage() {
                     ➕ Add New Field
                   </Button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 max-h-96 overflow-y-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 max-h-96 overflow-y-auto touch-pan-y">
                   {currentTemplate.fields.map((field) => (
                     <div
                       key={field.id}
-                      className={`p-3 md:p-4 border-2 rounded-lg transition-all duration-300 ${
+                      className={`p-3 md:p-4 border-2 rounded-lg transition-all duration-300 touch-manipulation ${
                         selectedField?.id === field.id
                           ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                           : "border-gray-200 dark:border-gray-700"
