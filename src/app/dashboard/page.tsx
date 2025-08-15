@@ -34,10 +34,10 @@ export default function DashboardPage() {
       hoverColor: "hover:from-blue-600 hover:to-blue-700",
     },
     {
-      title: "Advanced Generator",
-      description: "Upload PDF and auto-generate bills",
+      title: "Manual Bill Template",
+      description: "Create using the built-in manual template",
       href: "/bills/advanced",
-      icon: "🚀",
+      icon: "🧾",
       color: "from-purple-500 to-purple-600",
       hoverColor: "hover:from-purple-600 hover:to-purple-700",
     },
@@ -73,10 +73,10 @@ export default function DashboardPage() {
       type: "landlord",
     },
     {
-      action: "Bill generated",
-      detail: "Advanced Generator - Flight Ticket",
+      action: "Bill prepared",
+      detail: "Manual Bill Template used",
       time: "3 days ago",
-      type: "generator",
+      type: "bill",
     },
     {
       action: "Payment received",
@@ -245,11 +245,11 @@ export default function DashboardPage() {
             <div className="space-y-4">
               <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                 <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                  🚀 Advanced Generator
+                  🧾 Manual Bill Template
                 </h4>
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Upload any PDF bill and our AI will automatically detect
-                  fields and generate editable forms!
+                  Create bills manually using the built-in template. Go to <span className="font-semibold">Create New Bill</span>,
+                  fill the required fields, preview, and download the PDF.
                 </p>
               </div>
 

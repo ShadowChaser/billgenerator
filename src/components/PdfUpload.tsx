@@ -127,6 +127,39 @@ export default function PdfUpload({
     }
   };
 
+  // Extract text from image files using Tesseract OCR
+  const extractTextFromImage = async (file: File): Promise<string> => {
+    const worker = await createWorker("eng");
+    try {
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      // Load the image into a canvas for consistent OCR input
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = (e) => reject(e);
+        img.src = dataUrl;
+      });
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      ctx?.drawImage(img, 0, 0);
+
+      const { data: { text } } = await worker.recognize(canvas);
+      return text || "";
+    } finally {
+      await worker.terminate();
+    }
+  };
+
   const generateNextMonthFields = (
     lastFields: Partial<BillFormInput>
   ): Partial<BillFormInput> => {
@@ -487,9 +520,15 @@ export default function PdfUpload({
     const isPdf = name.endsWith(".pdf") || file.type.includes("pdf");
     const isDocx = name.endsWith(".docx") || file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
     const isDoc = name.endsWith(".doc");
+    const isImage =
+      ["image/png", "image/jpeg", "image/webp"].includes(file.type) ||
+      name.endsWith(".png") ||
+      name.endsWith(".jpg") ||
+      name.endsWith(".jpeg") ||
+      name.endsWith(".webp");
 
-    if (!isPdf && !isDocx) {
-      setError("Please select a PDF or DOCX file (.pdf, .docx). Legacy .doc is not supported in-browser.");
+    if (!isPdf && !isDocx && !isImage) {
+      setError("Please select a PDF, DOCX, or Image file (.pdf, .docx, .png, .jpg, .jpeg, .webp). Legacy .doc is not supported in-browser.");
       return;
     }
 
@@ -502,6 +541,8 @@ export default function PdfUpload({
         ? await extractTextFromPdf(file)
         : isDocx
         ? await extractTextFromDocx(file)
+        : isImage
+        ? await extractTextFromImage(file)
         : (() => {
             if (isDoc) {
               throw new Error(
@@ -511,7 +552,7 @@ export default function PdfUpload({
             throw new Error("Unsupported file type.");
           })();
       console.log(
-        "Extracted text from PDF (length:",
+        "Extracted text from file (length:",
         text.length,
         "):",
         JSON.stringify(text.substring(0, 500))
@@ -520,7 +561,7 @@ export default function PdfUpload({
 
       if (Object.keys(extractedFields).length === 0) {
         setError(
-          "No relevant information found in the PDF. Please check if the PDF contains bill details."
+          "No relevant information found in the file. Please check if it contains bill details."
         );
         console.log(
           "No fields extracted. Extracted text preview:",
@@ -535,17 +576,17 @@ export default function PdfUpload({
         );
         const fieldCount = Object.keys(extractedFields).length;
         setSuccess(
-          `Successfully extracted ${fieldCount} field(s) from the PDF!`
+          `Successfully extracted ${fieldCount} field(s) from the file!`
         );
         console.log("Extracted fields:", extractedFields);
         setError(null);
       }
     } catch (err) {
-      console.error("Error processing PDF:", err);
+      console.error("Error processing file:", err);
       if (err instanceof Error) {
-        setError(`Failed to process PDF: ${err.message}`);
+        setError(`Failed to process file: ${err.message}`);
       } else {
-        setError("Failed to process PDF. Please try again.");
+        setError("Failed to process file. Please try again.");
       }
     } finally {
       setIsProcessing(false);
@@ -559,14 +600,24 @@ export default function PdfUpload({
   return (
     <div className="rounded-md border p-4 grid gap-4">
       <div className="text-sm font-semibold opacity-80">
-        Upload PDF to Auto-fill
+        Auto-fill from PDF, Word, or Image (.pdf, .docx, .png, .jpg, .jpeg, .webp)
+      </div>
+      <div className="text-xs rounded-md border border-amber-300 bg-amber-50 text-amber-800 p-3 flex items-start gap-2">
+        <span className="select-none">⚠️</span>
+        <div>
+          <div className="font-semibold">Important</div>
+          <div>
+            Uploads work best with bills generated from this app. Other PDFs/Word/images may not be detected correctly.
+            If parsing fails or results look wrong, please fill the form manually.
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-2">
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf,.docx"
+          accept=".pdf,.docx,.png,.jpg,.jpeg,.webp"
           onChange={handleFileUpload}
           disabled={disabled || isProcessing}
           className="border rounded px-3 py-2 bg-transparent disabled:opacity-50"
@@ -574,8 +625,7 @@ export default function PdfUpload({
 
         {isProcessing && (
           <div className="text-sm text-blue-600">
-            Processing PDF (may take longer for scanned documents)... Please
-            wait.
+            Processing file (may take longer for scanned documents)... Please wait.
           </div>
         )}
 
@@ -602,9 +652,9 @@ export default function PdfUpload({
         )}
 
         <div className="text-xs text-gray-500">
-          Upload a PDF bill to automatically extract and fill in the form
-          fields. Supported fields: Landlord name, amount, rate, bill number,
-          dates, and period.
+          Upload a PDF, DOCX, or image bill to automatically extract and fill in the form fields.
+          Supported formats: PDF (.pdf), Word (.docx), Images (.png, .jpg, .jpeg, .webp). Supported fields: Landlord name, amount,
+          rate, bill number, dates, and period. Best results with bills generated here; scanned or complex layouts may not parse fully.
         </div>
       </div>
     </div>
