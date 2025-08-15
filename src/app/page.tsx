@@ -22,16 +22,16 @@ const stagger = {
 
 export default function Home() {
   return (
-    <div className="relative overflow-hidden">
+    <div className="relative overflow-x-hidden">
       {/* Background effects */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute -top-20 -left-20 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-gradient-to-tr from-blue-500/20 to-teal-400/20 blur-3xl" />
         <div className="absolute -bottom-20 -right-20 h-56 w-56 sm:h-72 sm:w-72 rounded-full bg-gradient-to-tr from-fuchsia-500/20 to-purple-400/20 blur-3xl" />
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-black/10 to-transparent dark:via-white/10" />
       </div>
 
       {/* Hero Section */}
-      <section className="max-w-6xl mx-auto px-4 pt-16 pb-12 sm:pt-20 sm:pb-16">
+      <section className="w-full px-4 min-h-[clamp(520px,calc(100svh-4rem-1px),760px)] flex items-center justify-center py-8 sm:py-12">
         <motion.div
           initial="hidden"
           animate="show"

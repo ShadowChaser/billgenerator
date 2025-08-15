@@ -5,8 +5,8 @@ import Link from "next/link";
 export default function HeaderNav() {
   const [open, setOpen] = useState(false);
   return (
-    <header className="border-b border-black/10 dark:border-white/10">
-      <div className="max-w-5xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-3">
+    <header className="border-b border-black/10 dark:border-white/10 h-16">
+      <div className="max-w-5xl mx-auto px-4 h-full flex flex-wrap items-center justify-between gap-3">
         <Link href="/" className="font-semibold text-base sm:text-lg">
           BillMate
         </Link>
