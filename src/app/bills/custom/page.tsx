@@ -315,7 +315,7 @@ export default function CustomTemplateBillPage() {
           <label key={key} className="grid gap-1">
             {commonLabel}
             <textarea
-              className="ring-1 ring-inset rounded px-3 py-2 md:px-3 md:py-2 bg-transparent min-h-[80px]"
+              className="w-full ring-1 ring-inset rounded px-3 py-2 md:px-3 md:py-2 bg-transparent min-h-[96px] md:min-h-[80px] resize-y leading-6 text-base md:text-sm"
               value={val}
               onChange={(e) => onChangeField(f, e.target.value)}
               placeholder={f.placeholder}
@@ -328,7 +328,7 @@ export default function CustomTemplateBillPage() {
           <label key={key} className="grid gap-1">
             {commonLabel}
             <select
-              className="ring-1 ring-inset rounded px-3 py-2 md:px-3 md:py-2 bg-transparent"
+              className="w-full ring-1 ring-inset rounded px-3 py-2 md:px-3 md:py-2 bg-transparent text-base md:text-sm"
               value={val}
               onChange={(e) => onChangeField(f, e.target.value)}
             >
@@ -347,7 +347,7 @@ export default function CustomTemplateBillPage() {
             <input
               type="file"
               accept="image/*"
-              className="ring-1 ring-inset rounded px-3 py-2 md:px-3 md:py-2 bg-transparent"
+              className="w-full ring-1 ring-inset rounded px-3 py-2 md:px-3 md:py-2 bg-transparent text-base md:text-sm"
               onChange={(e) => onChangeField(f, e.target.files?.[0] ?? null)}
             />
             {val ? <span className="text-xs opacity-70">Image selected</span> : null}
@@ -360,7 +360,7 @@ export default function CustomTemplateBillPage() {
           {commonLabel}
           <input
             type={inputType}
-            className="ring-1 ring-inset rounded px-3 py-2 md:px-3 md:py-2 bg-transparent"
+            className="w-full ring-1 ring-inset rounded px-3 py-2 md:px-3 md:py-2 bg-transparent text-base md:text-sm"
             value={val}
             onChange={(e) => onChangeField(f, e.target.value)}
             placeholder={f.placeholder}
