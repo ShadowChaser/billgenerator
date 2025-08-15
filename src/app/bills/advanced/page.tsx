@@ -216,42 +216,102 @@ export default function AdvancedBillGeneratorPage() {
           alignment: "left",
           required: true
         },
-        // Items Table Header
+        // Table Header Row
         {
-          id: "items-header",
-          label: "Items Header",
-          value: "Description\t\t\tQty\tRate\tAmount",
+          id: "header-description",
+          label: "Header Description",
+          value: "Description",
           type: "text",
           x: 50,
           y: 380,
-          width: 700,
+          width: 350,
           height: 35,
           fontSize: 14,
           isBold: true,
           isItalic: false,
           textColor: "#ffffff",
-          backgroundColor: "#374151",
+          backgroundColor: "#4b5563",
           borderColor: "#374151",
           borderWidth: 1,
-          borderRadius: 4,
+          borderRadius: 0,
           alignment: "left",
           required: false
         },
-        // Sample Items
         {
-          id: "item-1",
-          label: "Item 1",
-          value: "Professional Services - Web Development\t\t1\t$1,500.00\t$1,500.00",
+          id: "header-qty",
+          label: "Header Qty",
+          value: "Qty",
+          type: "text",
+          x: 400,
+          y: 380,
+          width: 80,
+          height: 35,
+          fontSize: 14,
+          isBold: true,
+          isItalic: false,
+          textColor: "#ffffff",
+          backgroundColor: "#4b5563",
+          borderColor: "#374151",
+          borderWidth: 1,
+          borderRadius: 0,
+          alignment: "center",
+          required: false
+        },
+        {
+          id: "header-rate",
+          label: "Header Rate",
+          value: "Rate",
+          type: "text",
+          x: 480,
+          y: 380,
+          width: 120,
+          height: 35,
+          fontSize: 14,
+          isBold: true,
+          isItalic: false,
+          textColor: "#ffffff",
+          backgroundColor: "#4b5563",
+          borderColor: "#374151",
+          borderWidth: 1,
+          borderRadius: 0,
+          alignment: "center",
+          required: false
+        },
+        {
+          id: "header-amount",
+          label: "Header Amount",
+          value: "Amount",
+          type: "text",
+          x: 600,
+          y: 380,
+          width: 150,
+          height: 35,
+          fontSize: 14,
+          isBold: true,
+          isItalic: false,
+          textColor: "#ffffff",
+          backgroundColor: "#4b5563",
+          borderColor: "#374151",
+          borderWidth: 1,
+          borderRadius: 0,
+          alignment: "center",
+          required: false
+        },
+        // Item 1 Row
+        {
+          id: "item1-description",
+          label: "Item 1 Description",
+          value: "Professional Services - Web Development",
           type: "text",
           x: 50,
-          y: 420,
-          width: 700,
+          y: 415,
+          width: 350,
           height: 30,
           fontSize: 12,
           isBold: false,
           isItalic: false,
           textColor: "#374151",
-          backgroundColor: "transparent",
+          backgroundColor: "#ffffff",
           borderColor: "#e5e7eb",
           borderWidth: 1,
           borderRadius: 0,
@@ -259,13 +319,74 @@ export default function AdvancedBillGeneratorPage() {
           required: false
         },
         {
-          id: "item-2",
-          label: "Item 2",
-          value: "Design Consultation\t\t\t\t2\t$250.00\t$500.00",
+          id: "item1-qty",
+          label: "Item 1 Qty",
+          value: "1",
+          type: "text",
+          x: 400,
+          y: 415,
+          width: 80,
+          height: 30,
+          fontSize: 12,
+          isBold: false,
+          isItalic: false,
+          textColor: "#374151",
+          backgroundColor: "#ffffff",
+          borderColor: "#e5e7eb",
+          borderWidth: 1,
+          borderRadius: 0,
+          alignment: "center",
+          required: false
+        },
+        {
+          id: "item1-rate",
+          label: "Item 1 Rate",
+          value: "$1,500.00",
+          type: "text",
+          x: 480,
+          y: 415,
+          width: 120,
+          height: 30,
+          fontSize: 12,
+          isBold: false,
+          isItalic: false,
+          textColor: "#374151",
+          backgroundColor: "#ffffff",
+          borderColor: "#e5e7eb",
+          borderWidth: 1,
+          borderRadius: 0,
+          alignment: "right",
+          required: false
+        },
+        {
+          id: "item1-amount",
+          label: "Item 1 Amount",
+          value: "$1,500.00",
+          type: "text",
+          x: 600,
+          y: 415,
+          width: 150,
+          height: 30,
+          fontSize: 12,
+          isBold: false,
+          isItalic: false,
+          textColor: "#374151",
+          backgroundColor: "#ffffff",
+          borderColor: "#e5e7eb",
+          borderWidth: 1,
+          borderRadius: 0,
+          alignment: "right",
+          required: false
+        },
+        // Item 2 Row
+        {
+          id: "item2-description",
+          label: "Item 2 Description",
+          value: "Design Consultation",
           type: "text",
           x: 50,
-          y: 455,
-          width: 700,
+          y: 445,
+          width: 350,
           height: 30,
           fontSize: 12,
           isBold: false,
@@ -276,6 +397,66 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 1,
           borderRadius: 0,
           alignment: "left",
+          required: false
+        },
+        {
+          id: "item2-qty",
+          label: "Item 2 Qty",
+          value: "2",
+          type: "text",
+          x: 400,
+          y: 445,
+          width: 80,
+          height: 30,
+          fontSize: 12,
+          isBold: false,
+          isItalic: false,
+          textColor: "#374151",
+          backgroundColor: "#f9fafb",
+          borderColor: "#e5e7eb",
+          borderWidth: 1,
+          borderRadius: 0,
+          alignment: "center",
+          required: false
+        },
+        {
+          id: "item2-rate",
+          label: "Item 2 Rate",
+          value: "$250.00",
+          type: "text",
+          x: 480,
+          y: 445,
+          width: 120,
+          height: 30,
+          fontSize: 12,
+          isBold: false,
+          isItalic: false,
+          textColor: "#374151",
+          backgroundColor: "#f9fafb",
+          borderColor: "#e5e7eb",
+          borderWidth: 1,
+          borderRadius: 0,
+          alignment: "right",
+          required: false
+        },
+        {
+          id: "item2-amount",
+          label: "Item 2 Amount",
+          value: "$500.00",
+          type: "text",
+          x: 600,
+          y: 445,
+          width: 150,
+          height: 30,
+          fontSize: 12,
+          isBold: false,
+          isItalic: false,
+          textColor: "#374151",
+          backgroundColor: "#f9fafb",
+          borderColor: "#e5e7eb",
+          borderWidth: 1,
+          borderRadius: 0,
+          alignment: "right",
           required: false
         },
         // Totals Section
@@ -396,6 +577,15 @@ export default function AdvancedBillGeneratorPage() {
   const [inlineEditValue, setInlineEditValue] = useState("");
   const [inlineEditPosition, setInlineEditPosition] = useState<{x: number; y: number; width: number; height: number} | null>(null);
   const inlineInputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+
+  // Template name inline editing
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [editingTemplateName, setEditingTemplateName] = useState("");
+
+  // Bill generation and preview
+  const [showBillPreview, setShowBillPreview] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
+  const billCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Image cache for drawing
   const imageCacheRef = useRef<Record<string, HTMLImageElement>>({});
@@ -1330,13 +1520,254 @@ export default function AdvancedBillGeneratorPage() {
   };
 
   const generateBill = (template: Template) => {
-    const billData = template.fields.reduce((acc, f) => {
-      acc[f.label] = f.value;
-      return acc;
-    }, {} as Record<string, string>);
-    console.log("Generated bill data:", billData);
-    alert("Bill generated! Check console for data.");
+    setPreviewTemplate(template);
+    setShowBillPreview(true);
   };
+
+  // Render bill to canvas for preview and PDF export
+  const renderBillToCanvas = useCallback((canvas: HTMLCanvasElement, template: Template) => {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Set canvas size
+    canvas.width = template.width;
+    canvas.height = template.height;
+
+    // Clear and set background
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Render all fields
+    template.fields.forEach((field) => {
+      // Skip empty fields
+      if (!field.value && !field.placeholder) return;
+
+      if (field.type === "image" || field.type === "signature") {
+        if (field.value) {
+          const img = new Image();
+          img.onload = () => {
+            const iw = img.naturalWidth || img.width;
+            const ih = img.naturalHeight || img.height;
+            const scale = Math.min(field.width / iw, field.height / ih);
+            const dw = Math.max(1, Math.floor(iw * scale));
+            const dh = Math.max(1, Math.floor(ih * scale));
+            const dx = field.x + (field.width - dw) / 2;
+            const dy = field.y + (field.height - dh) / 2;
+            ctx.drawImage(img, dx, dy, dw, dh);
+          };
+          img.src = field.value;
+        }
+      } else {
+        // Text fields
+        ctx.fillStyle = field.backgroundColor || "transparent";
+        if (field.backgroundColor && field.backgroundColor !== "transparent") {
+          ctx.fillRect(field.x, field.y, field.width, field.height);
+        }
+
+        // Border
+        if (field.borderWidth && field.borderWidth > 0) {
+          ctx.strokeStyle = field.borderColor || "#e5e7eb";
+          ctx.lineWidth = field.borderWidth;
+          ctx.strokeRect(field.x, field.y, field.width, field.height);
+        }
+
+        // Text
+        ctx.fillStyle = field.textColor || "#111827";
+        ctx.font = `${field.isItalic ? "italic " : ""}${field.isBold ? "bold " : ""}${field.fontSize || 16}px sans-serif`;
+        ctx.textAlign = field.alignment as CanvasTextAlign;
+        
+        let tx = field.x + 8;
+        if (field.alignment === "center") tx = field.x + field.width / 2;
+        if (field.alignment === "right") tx = field.x + field.width - 8;
+
+        const content = field.value || field.placeholder || "";
+        
+        // Handle multi-line text
+        if (field.type === "textarea" && content.includes('\n')) {
+          const lines = content.split('\n');
+          const lineHeight = (field.fontSize || 16) * 1.2;
+          const totalTextHeight = lines.length * lineHeight;
+          let startY = field.y + (field.height - totalTextHeight) / 2 + lineHeight / 2;
+          
+          ctx.textBaseline = "middle";
+          lines.forEach((line, index) => {
+            const y = startY + (index * lineHeight);
+            if (y >= field.y && y <= field.y + field.height) {
+              ctx.fillText(line, tx, y, field.width - 16);
+            }
+          });
+        } else {
+          ctx.textBaseline = "middle";
+          ctx.fillText(content, tx, field.y + field.height / 2, field.width - 16);
+        }
+      }
+    });
+  }, []);
+
+  // Export to PDF
+  const exportToPDF = async () => {
+    if (!previewTemplate || !billCanvasRef.current) return;
+
+    try {
+      // Dynamic import of jsPDF
+      const { jsPDF } = await import('jspdf');
+      
+      // Re-render to ensure latest state
+      renderBillToCanvas(billCanvasRef.current, previewTemplate);
+      
+      // Wait for images to load
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Get canvas and convert to image
+      const canvas = billCanvasRef.current;
+      const imgData = canvas.toDataURL('image/png', 1.0);
+      
+      // Calculate PDF dimensions (A4 size)
+      const pdfWidth = 210; // A4 width in mm
+      const pdfHeight = 297; // A4 height in mm
+      const canvasAspectRatio = canvas.width / canvas.height;
+      
+      let imgWidth = pdfWidth - 20; // 10mm margin on each side
+      let imgHeight = imgWidth / canvasAspectRatio;
+      
+      // If image is too tall, scale it down
+      if (imgHeight > pdfHeight - 20) {
+        imgHeight = pdfHeight - 20;
+        imgWidth = imgHeight * canvasAspectRatio;
+      }
+      
+      // Create PDF
+      const pdf = new jsPDF({
+        orientation: imgWidth > imgHeight ? 'landscape' : 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      // Center the image
+      const x = (pdfWidth - imgWidth) / 2;
+      const y = (pdfHeight - imgHeight) / 2;
+      
+      pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+      
+      // Save the PDF
+      const fileName = `${previewTemplate.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_bill.pdf`;
+      pdf.save(fileName);
+      
+    } catch (error) {
+      console.error('PDF export failed:', error);
+      alert('PDF export failed. Please try again.');
+    }
+  };
+
+  // Export to Word (RTF format - opens in Word)
+  const exportToWord = async () => {
+    if (!previewTemplate) return;
+
+    try {
+      // Generate RTF content that opens properly in Word
+      const rtfContent = generateRTFContent(previewTemplate);
+      
+      // Create blob with RTF content
+      const blob = new Blob([rtfContent], { 
+        type: 'application/rtf' 
+      });
+      
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `${previewTemplate.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_bill.rtf`;
+      link.click();
+      
+      // Clean up
+      URL.revokeObjectURL(link.href);
+      
+    } catch (error) {
+      console.error('Word export failed:', error);
+      alert('Word export failed. Please try again.');
+    }
+  };
+
+  // Generate RTF document content (opens properly in Word)
+  const generateRTFContent = (template: Template) => {
+    // RTF header with font table
+    const rtfHeader = `{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}{\\f1 Arial;}}\n`;
+    const rtfFooter = `}`;
+    
+    // Document title and header
+    let rtfBody = `\\f1\\fs28\\qc\\b ${template.name}\\b0\\par\n`;
+    rtfBody += `\\fs20\\qc Generated on ${new Date().toLocaleDateString()}\\par\n\\par\n\\par\n`;
+    
+    // Add each field with proper formatting
+    template.fields.forEach(field => {
+      const fieldValue = field.value || field.placeholder || '[Empty]';
+      // Escape RTF special characters
+      const escapedLabel = field.label.replace(/\\/g, '\\\\').replace(/{/g, '\\{').replace(/}/g, '\\}');
+      const escapedValue = fieldValue.replace(/\\/g, '\\\\').replace(/{/g, '\\{').replace(/}/g, '\\}').replace(/\n/g, '\\par\n');
+      
+      rtfBody += `\\fs22\\b ${escapedLabel}:\\b0\\par\n`;
+      rtfBody += `\\fs20 ${escapedValue}\\par\n\\par\n`;
+    });
+    
+    // Footer
+    rtfBody += `\\par\n\\fs16\\qc\\i This document was generated using Advanced Bill Generator\\i0\\par\n`;
+    
+    return rtfHeader + rtfBody + rtfFooter;
+  };
+
+  // Export as Image (PNG)
+  const exportAsImage = async () => {
+    if (!previewTemplate || !billCanvasRef.current) return;
+
+    try {
+      // Re-render to ensure latest state
+      renderBillToCanvas(billCanvasRef.current, previewTemplate);
+      
+      // Wait for images to load
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Convert canvas to image
+      const canvas = billCanvasRef.current;
+      const imgData = canvas.toDataURL('image/png', 1.0);
+      
+      // Download as image
+      const link = document.createElement('a');
+      link.download = `${previewTemplate.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_bill.png`;
+      link.href = imgData;
+      link.click();
+      
+    } catch (error) {
+      console.error('Image export failed:', error);
+      alert('Image export failed. Please try again.');
+    }
+  };
+
+  // Print bill
+  const printBill = () => {
+    if (!billCanvasRef.current) return;
+    
+    const canvas = billCanvasRef.current;
+    const imgData = canvas.toDataURL('image/png');
+    
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head><title>Print Bill - ${previewTemplate?.name}</title></head>
+          <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh;">
+            <img src="${imgData}" style="max-width:100%; max-height:100%; object-fit:contain;" />
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
+  // Update bill preview when template changes
+  useEffect(() => {
+    if (showBillPreview && previewTemplate && billCanvasRef.current) {
+      renderBillToCanvas(billCanvasRef.current, previewTemplate);
+    }
+  }, [showBillPreview, previewTemplate, renderBillToCanvas]);
 
   const deleteTemplate = (templateId: string) => {
     setTemplates((prev) => prev.filter((t) => t.id !== templateId));
@@ -1378,31 +1809,119 @@ export default function AdvancedBillGeneratorPage() {
           {/* Templates List */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {templates.map((template) => (
-              <div key={template.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-md transition-shadow">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">{template.name}</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{template.description}</p>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                  {template.fields.length} fields • Created {template.createdAt.toLocaleDateString()}
+              <div key={template.id} className="group bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 overflow-hidden">
+                {/* Header Section */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600 p-6 border-b border-gray-100 dark:border-gray-600">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      {editingTemplateId === template.id ? (
+                        <input
+                          type="text"
+                          value={editingTemplateName}
+                          onChange={(e) => setEditingTemplateName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              if (editingTemplateName.trim()) {
+                                setTemplates(prev => prev.map(t => 
+                                  t.id === template.id ? { ...t, name: editingTemplateName.trim() } : t
+                                ));
+                                if (currentTemplate && currentTemplate.id === template.id) {
+                                  setCurrentTemplate(prev => prev ? { ...prev, name: editingTemplateName.trim() } : null);
+                                }
+                              }
+                              setEditingTemplateId(null);
+                              setEditingTemplateName("");
+                            } else if (e.key === "Escape") {
+                              setEditingTemplateId(null);
+                              setEditingTemplateName("");
+                            }
+                          }}
+                          className="text-xl font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-2 border-blue-500 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          autoFocus
+                        />
+                      ) : (
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
+                          {template.name}
+                        </h3>
+                      )}
+                      <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{template.description}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setEditingTemplateId(template.id);
+                        setEditingTemplateName(template.name);
+                      }}
+                      className="ml-3 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-2 rounded-lg hover:bg-white dark:hover:bg-gray-600 transition-all duration-200"
+                      title="Rename template"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setCurrentTemplate(template)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm py-1 px-3 rounded transition-colors duration-300"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => generateBill(template)}
-                    className="bg-purple-600 hover:bg-purple-700 text-white text-sm py-1 px-3 rounded transition-colors duration-300"
-                  >
-                    Generate Bill
-                  </button>
-                  <button
-                    onClick={() => deleteTemplate(template.id)}
-                    className="bg-red-600 hover:bg-red-700 text-white text-sm py-1 px-3 rounded transition-colors duration-300"
-                  >
-                    Delete
-                  </button>
+
+                {/* Content Section */}
+                <div className="p-6">
+                  {/* Stats */}
+                  <div className="flex items-center gap-6 mb-6 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span className="font-medium">{template.fields.length} fields</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span>Created {template.createdAt.toLocaleDateString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setCurrentTemplate(template)}
+                      className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => generateBill(template)}
+                      className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Generate
+                    </button>
+                    <button
+                      onClick={() => {
+                        const templateCopy = {
+                          ...template,
+                          id: `tpl-${Date.now()}`,
+                          name: `${template.name} (Copy)`,
+                          createdAt: new Date()
+                        };
+                        setTemplates(prev => [...prev, templateCopy]);
+                      }}
+                      className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      Duplicate
+                    </button>
+                    <button
+                      onClick={() => deleteTemplate(template.id)}
+                      className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -1422,7 +1941,7 @@ export default function AdvancedBillGeneratorPage() {
                 <p className="text-gray-600 dark:text-gray-400">{currentTemplate.fields.length} fields • Advanced styling enabled</p>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 {!isEditing ? (
                   <button
                     onClick={() => setIsEditing(true)}
@@ -1451,11 +1970,37 @@ export default function AdvancedBillGeneratorPage() {
                       💾 Save Template
                     </button>
                     <button
-                      onClick={() => setIsEditing(false)}
+                      onClick={() => setShowTemplateSettings(true)}
                       className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-300"
                     >
-                      ❌ Cancel Editing
+                      ⚙️ Settings
                     </button>
+                    
+                    {/* Undo/Redo Controls */}
+                    <div className="flex items-center gap-2 ml-4 pl-4 border-l border-gray-300 dark:border-gray-600">
+                      <button
+                        onClick={undo}
+                        disabled={undoStack.length === 0}
+                        className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-300 flex items-center gap-2"
+                        title="Undo (Ctrl+Z)"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                        </svg>
+                        Undo
+                      </button>
+                      <button
+                        onClick={redo}
+                        disabled={redoStack.length === 0}
+                        className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-300 flex items-center gap-2"
+                        title="Redo (Ctrl+Shift+Z)"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10h-10a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6" />
+                        </svg>
+                        Redo
+                      </button>
+                    </div>
                   </>
                 )}
               </div>
@@ -1506,13 +2051,14 @@ export default function AdvancedBillGeneratorPage() {
                         onChange={(e) => setInlineEditValue(e.target.value)}
                         onKeyDown={handleInlineKeyDown}
                         onBlur={finishInlineEdit}
-                        className="w-full h-full p-2 text-sm border-2 border-blue-500 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none"
+                        className="w-full h-full p-2 text-sm border-2 border-blue-500 rounded resize-none"
                         style={{
                           fontSize: `${(inlineEditField.fontSize || 16) * (inlineEditPosition.width / inlineEditField.width)}px`,
                           fontWeight: inlineEditField.isBold ? 'bold' : 'normal',
                           fontStyle: inlineEditField.isItalic ? 'italic' : 'normal',
                           textAlign: inlineEditField.alignment as any,
-                          color: inlineEditField.textColor || '#111827'
+                          color: inlineEditField.textColor || '#111827',
+                          backgroundColor: inlineEditField.backgroundColor || '#ffffff'
                         }}
                       />
                     ) : (
@@ -1523,42 +2069,20 @@ export default function AdvancedBillGeneratorPage() {
                         onChange={(e) => setInlineEditValue(e.target.value)}
                         onKeyDown={handleInlineKeyDown}
                         onBlur={finishInlineEdit}
-                        className="w-full h-full p-2 text-sm border-2 border-blue-500 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        className="w-full h-full p-2 text-sm border-2 border-blue-500 rounded"
                         style={{
                           fontSize: `${(inlineEditField.fontSize || 16) * (inlineEditPosition.width / inlineEditField.width)}px`,
                           fontWeight: inlineEditField.isBold ? 'bold' : 'normal',
                           fontStyle: inlineEditField.isItalic ? 'italic' : 'normal',
                           textAlign: inlineEditField.alignment as any,
-                          color: inlineEditField.textColor || '#111827'
+                          color: inlineEditField.textColor || '#111827',
+                          backgroundColor: inlineEditField.backgroundColor || '#ffffff'
                         }}
                       />
                     )}
                   </div>
                 )}
 
-                {isEditing && (
-                  <div className="absolute top-2 right-2 bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border">
-                    <div className="flex items-center gap-2 mb-2">
-                      <button
-                        onClick={undo}
-                        disabled={undoStack.length === 0}
-                        className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-xs py-1 px-2 rounded transition-colors duration-300"
-                        title="Undo (Ctrl+Z)"
-                      >
-                        ↶ Undo
-                      </button>
-                      <button
-                        onClick={redo}
-                        disabled={redoStack.length === 0}
-                        className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-xs py-1 px-2 rounded transition-colors duration-300"
-                        title="Redo (Ctrl+Shift+Z)"
-                      >
-                        ↷ Redo
-                      </button>
-                    </div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">💡 Double-click to edit • Delete key to remove • Ctrl+Z to undo</p>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -2068,6 +2592,207 @@ export default function AdvancedBillGeneratorPage() {
                 </button>
                 <button onClick={() => setShowFieldEditor(false)} className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-300">
                   Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Bill Preview Modal */}
+        {showBillPreview && previewTemplate && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Bill Preview - {previewTemplate.name}</h3>
+                  <button
+                    onClick={() => setShowBillPreview(false)}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-3 mt-4">
+                  <button
+                    onClick={exportToPDF}
+                    className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition-colors duration-300 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Export PDF
+                  </button>
+                  <button
+                    onClick={exportToWord}
+                    className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors duration-300 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Export Word (RTF)
+                  </button>
+                  <button
+                    onClick={exportAsImage}
+                    className="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg transition-colors duration-300 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Export Image
+                  </button>
+                  <button
+                    onClick={printBill}
+                    className="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition-colors duration-300 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Print
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentTemplate(previewTemplate);
+                      setShowBillPreview(false);
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors duration-300 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit Template
+                  </button>
+                </div>
+              </div>
+              
+              <div className="p-6 overflow-auto max-h-[calc(90vh-200px)]">
+                <div className="flex justify-center">
+                  <div className="border border-gray-300 rounded-lg overflow-hidden shadow-lg">
+                    <canvas
+                      ref={billCanvasRef}
+                      width={previewTemplate.width}
+                      height={previewTemplate.height}
+                      className="max-w-full h-auto"
+                      style={{
+                        maxWidth: '100%',
+                        height: 'auto',
+                        display: 'block'
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Template Settings Modal */}
+        {showTemplateSettings && currentTemplate && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Template Settings</h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Template Name</label>
+                  <input
+                    type="text"
+                    value={currentTemplate.name}
+                    onChange={(e) => {
+                      saveStateForUndo();
+                      const updatedTemplate = { ...currentTemplate, name: e.target.value };
+                      setCurrentTemplate(updatedTemplate);
+                      setTemplates(prev => prev.map(t => t.id === currentTemplate.id ? updatedTemplate : t));
+                    }}
+                    className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    placeholder="Enter template name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                  <textarea
+                    value={currentTemplate.description}
+                    onChange={(e) => {
+                      saveStateForUndo();
+                      const updatedTemplate = { ...currentTemplate, description: e.target.value };
+                      setCurrentTemplate(updatedTemplate);
+                      setTemplates(prev => prev.map(t => t.id === currentTemplate.id ? updatedTemplate : t));
+                    }}
+                    className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-vertical"
+                    placeholder="Enter template description"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Width (px)</label>
+                    <input
+                      type="number"
+                      value={currentTemplate.width}
+                      onChange={(e) => {
+                        saveStateForUndo();
+                        const newWidth = Math.max(400, parseInt(e.target.value) || 800);
+                        const updatedTemplate = { ...currentTemplate, width: newWidth };
+                        setCurrentTemplate(updatedTemplate);
+                        setTemplates(prev => prev.map(t => t.id === currentTemplate.id ? updatedTemplate : t));
+                      }}
+                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      min="400"
+                      max="2000"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Height (px)</label>
+                    <input
+                      type="number"
+                      value={currentTemplate.height}
+                      onChange={(e) => {
+                        saveStateForUndo();
+                        const newHeight = Math.max(400, parseInt(e.target.value) || 1120);
+                        const updatedTemplate = { ...currentTemplate, height: newHeight };
+                        setCurrentTemplate(updatedTemplate);
+                        setTemplates(prev => prev.map(t => t.id === currentTemplate.id ? updatedTemplate : t));
+                      }}
+                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      min="400"
+                      max="2000"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Template Info</h4>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    Fields: {currentTemplate.fields.length} • Created: {currentTemplate.createdAt.toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setShowTemplateSettings(false)}
+                  className="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition-colors duration-300"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    saveStateForUndo();
+                    const templateCopy = {
+                      ...currentTemplate,
+                      id: `tpl-${Date.now()}`,
+                      name: `${currentTemplate.name} (Copy)`,
+                      createdAt: new Date()
+                    };
+                    setTemplates(prev => [...prev, templateCopy]);
+                    setCurrentTemplate(templateCopy);
+                    setShowTemplateSettings(false);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors duration-300"
+                >
+                  Duplicate Template
                 </button>
               </div>
             </div>
