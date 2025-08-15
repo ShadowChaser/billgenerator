@@ -21,6 +21,15 @@ function writeArray<T>(key: string, value: T[]) {
   window.localStorage.setItem(key, JSON.stringify(value));
 }
 
+// Generic exported helpers (safe wrappers) for reuse
+export function readArrayKey<T>(key: string): T[] {
+  return readArray<T>(key);
+}
+
+export function writeArrayKey<T>(key: string, value: T[]): void {
+  writeArray<T>(key, value);
+}
+
 export function getLandlords(): Landlord[] {
   return readArray<Landlord>(LANDLORDS_KEY);
 }

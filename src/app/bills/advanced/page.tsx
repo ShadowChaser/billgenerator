@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import jsPDF from "jspdf";
+import { readArrayKey, writeArrayKey } from "@/lib/localStore";
 
 // Types
 interface SubElement {
@@ -61,6 +62,9 @@ interface Template {
   createdAt: Date;
   fields: TemplateField[];
 }
+
+const TEMPLATES_KEY = "hrb_templates_v1";
+const LAST_TEMPLATE_KEY = "hrb_last_template_id_v1";
 
 type ResizeHandle = null | "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
 
@@ -546,6 +550,16 @@ export default function AdvancedBillGeneratorPage() {
         }
       ],
     };
+    // Try to load stored templates
+    try {
+      const stored = readArrayKey<any>(TEMPLATES_KEY);
+      if (stored && stored.length) {
+        return stored.map((t: any) => ({
+          ...t,
+          createdAt: t.createdAt ? new Date(t.createdAt) : new Date(),
+        }));
+      }
+    } catch {}
     return [sampleTemplate];
   });
 
@@ -553,6 +567,9 @@ export default function AdvancedBillGeneratorPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedField, setSelectedField] = useState<TemplateField | null>(null);
   const [showTemplateSettings, setShowTemplateSettings] = useState(false);
+
+  // New template chooser modal
+  const [showNewTemplateChooser, setShowNewTemplateChooser] = useState(false);
 
   // Canvas
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -601,10 +618,35 @@ export default function AdvancedBillGeneratorPage() {
   const [redoStack, setRedoStack] = useState<Template[]>([]);
   const maxUndoSteps = 50;
 
-  // Select first template by default
+  // Restore last-opened template or select first by default
   useEffect(() => {
-    if (!currentTemplate && templates.length > 0) setCurrentTemplate(templates[0]);
+    if (!currentTemplate && templates.length > 0) {
+      try {
+        const lastId = typeof window !== 'undefined' ? window.localStorage.getItem(LAST_TEMPLATE_KEY) : null;
+        const found = lastId ? templates.find(t => t.id === lastId) : null;
+        setCurrentTemplate(found || templates[0]);
+      } catch {
+        setCurrentTemplate(templates[0]);
+      }
+    }
   }, [templates, currentTemplate]);
+
+  // Persist last-opened template id
+  useEffect(() => {
+    try {
+      if (currentTemplate && typeof window !== 'undefined') {
+        window.localStorage.setItem(LAST_TEMPLATE_KEY, currentTemplate.id);
+      }
+    } catch {}
+  }, [currentTemplate]);
+
+  // Persist templates to localStorage whenever they change
+  useEffect(() => {
+    try {
+      const serializable = templates.map(t => ({ ...t, createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt }));
+      writeArrayKey(TEMPLATES_KEY, serializable as any);
+    } catch {}
+  }, [templates]);
 
   // Save state for undo/redo
   const saveStateForUndo = useCallback(() => {
@@ -915,6 +957,7 @@ export default function AdvancedBillGeneratorPage() {
             const dy = field.y + (field.height - dh) / 2;
             ctx.strokeRect(dx - 2, dy - 2, dw + 4, dh + 4);
           } else {
+            // If image not loaded yet, use full field area
             ctx.strokeRect(field.x - 2, field.y - 2, field.width + 4, field.height + 4);
           }
         } else {
@@ -1298,6 +1341,53 @@ export default function AdvancedBillGeneratorPage() {
   };
 
 
+  // Create from our professional sample (duplicate first professional or fallback to defaults)
+  const createFromProfessional = () => {
+    // Try to find a professional template to duplicate
+    const base = templates.find(t => /professional/i.test(t.name)) || null;
+    const idx = templates.length + 1;
+    const newTemplate: Template = base
+      ? {
+          ...base,
+          id: `tpl-${Date.now()}`,
+          name: `${base.name} (${idx})`,
+          createdAt: new Date(),
+          fields: base.fields.map(f => ({ ...f, id: `${f.id}-${Date.now()}-${Math.random().toString(36).slice(2,8)}` }))
+        }
+      : {
+          id: `tpl-${idx}`,
+          name: `Professional Template ${idx}`,
+          description: "New professional template",
+          width: 800,
+          height: 1120,
+          createdAt: new Date(),
+          fields: []
+        };
+    setTemplates(prev => [newTemplate, ...prev]);
+    setCurrentTemplate(newTemplate);
+    setShowNewTemplateChooser(false);
+    setIsEditing(true);
+  };
+
+  // Create empty canvas template
+  const createEmptyTemplate = () => {
+    const idx = templates.length + 1;
+    const t: Template = {
+      id: `tpl-${Date.now()}`,
+      name: `Empty Template ${idx}`,
+      description: "Blank canvas to design your own",
+      width: 800,
+      height: 1120,
+      createdAt: new Date(),
+      fields: [],
+    };
+    setTemplates((prev) => [t, ...prev]);
+    setCurrentTemplate(t);
+    setShowNewTemplateChooser(false);
+    setIsEditing(true);
+  };
+
+  // Legacy: keep as convenience path to quickly add a default-rich template (treated as professional)
   const createNewTemplate = () => {
     const idx = templates.length + 1;
     const defaultFields: TemplateField[] = [
@@ -1306,9 +1396,9 @@ export default function AdvancedBillGeneratorPage() {
         label: "Customer Name",
         value: "",
         type: "text",
-        x: 50,
+        x: 100,
         y: 100,
-        width: 300,
+        width: 200,
         height: 40,
         fontSize: 16,
         isBold: false,
@@ -1369,7 +1459,7 @@ export default function AdvancedBillGeneratorPage() {
         label: "Description",
         value: "",
         type: "textarea",
-        x: 50,
+        x: 100,
         y: 300,
         width: 600,
         height: 100,
@@ -1390,7 +1480,7 @@ export default function AdvancedBillGeneratorPage() {
         label: "Signature",
         value: "",
         type: "signature",
-        x: 50,
+        x: 100,
         y: 450,
         width: 250,
         height: 100,
@@ -1787,29 +1877,34 @@ export default function AdvancedBillGeneratorPage() {
   const deleteTemplate = (templateId: string) => {
     setTemplates((prev) => prev.filter((t) => t.id !== templateId));
     setCurrentTemplate((ct) => (ct && ct.id === templateId ? null : ct));
-    setSelectedField(null);
+    try {
+      if (typeof window !== 'undefined') {
+        const lastId = window.localStorage.getItem(LAST_TEMPLATE_KEY);
+        if (lastId === templateId) window.localStorage.removeItem(LAST_TEMPLATE_KEY);
+      }
+    } catch {}
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">🚀 Advanced Template Builder</h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+        <div className="text-center mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3 md:mb-4">🚀 Advanced Template Builder</h1>
+          <p className="text-base md:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto px-2">
             Create professional bill templates with advanced styling, positioning, and customization options!
           </p>
         </div>
 
         {/* Template Management */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 mb-8 border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Your Templates</h2>
-            <div className="flex gap-3">
-              <Button variant="secondary" onClick={() => setShowTemplateSettings(true)}>
+          <div className="flex items-start md:items-center justify-between mb-6 flex-col md:flex-row gap-3 md:gap-0">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Your Templates</h2>
+            <div className="flex gap-2 md:gap-3 w-full md:w-auto">
+              <Button className="w-full md:w-auto" variant="secondary" onClick={() => setShowTemplateSettings(true)}>
                 ⚙️ Template Settings
               </Button>
-              <Button variant="success" onClick={createNewTemplate}>
+              <Button className="w-full md:w-auto" variant="success" onClick={() => setShowNewTemplateChooser(true)}>
                 ✨ Create New Template
               </Button>
             </div>
@@ -1927,29 +2022,31 @@ export default function AdvancedBillGeneratorPage() {
 
         {/* Template Editor */}
         {currentTemplate && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-8 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-start md:items-center justify-between mb-4 md:mb-6 flex-col md:flex-row gap-3 md:gap-0">
               <div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{currentTemplate.name}</h3>
-                <p className="text-gray-600 dark:text-gray-400">{currentTemplate.fields.length} fields • Advanced styling enabled</p>
+                <h3 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">{currentTemplate.name}</h3>
+                <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">{currentTemplate.fields.length} fields • Advanced styling enabled</p>
               </div>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-2 md:gap-3 w-full md:w-auto">
                 {!isEditing ? (
-                  <Button onClick={() => setIsEditing(true)}>✏️ Edit Template</Button>
+                  <Button className="w-full md:w-auto" onClick={() => setIsEditing(true)}>✏️ Edit Template</Button>
                 ) : (
                   <>
-                    <Button onClick={() => openFieldEditor(undefined, "create")}>➕ Add Field</Button>
-                    <Button variant="gradient" onClick={exportCurrentCanvasToPdf}>🖨️ Export PDF</Button>
-                    <Button variant="success" onClick={saveTemplate}>💾 Save Template</Button>
+                    <Button className="w-full sm:w-auto" onClick={() => openFieldEditor(undefined, "create")}>
+                      ➕ Add Field
+                    </Button>
+                    <Button className="w-full sm:w-auto" variant="gradient" onClick={exportCurrentCanvasToPdf}>🖨️ Export PDF</Button>
+                    <Button className="w-full sm:w-auto" variant="success" onClick={saveTemplate}>💾 Save Template</Button>
                   </>
                 )}
               </div>
             </div>
 
             {/* Template Canvas */}
-            <div className="flex justify-center mb-6 overflow-auto">
+            <div className="flex justify-center mb-4 md:mb-6 overflow-auto">
               <div 
-                className="relative bg-white"
+                className="relative bg-white border border-gray-200 rounded-md shadow-sm"
                 style={{
                   width: currentTemplate.width,
                   height: currentTemplate.height,
@@ -1961,7 +2058,7 @@ export default function AdvancedBillGeneratorPage() {
                   ref={canvasRef}
                   width={currentTemplate.width}
                   height={currentTemplate.height}
-                  className="absolute top-0 left-0 w-full h-full border-2 border-gray-300 rounded-lg"
+                  className="absolute top-0 left-0 w-full h-full border-0 md:border-2 md:border-gray-300 rounded-md"
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
@@ -2028,27 +2125,27 @@ export default function AdvancedBillGeneratorPage() {
 
             {/* Fields Panel */}
             {isEditing && (
-              <div className="mt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Template Fields ({currentTemplate.fields.length})</h4>
-                  <Button onClick={() => openFieldEditor(undefined, "create")}>
+              <div className="mt-4 md:mt-6">
+                <div className="flex items-start md:items-center justify-between mb-3 md:mb-4 gap-2 md:gap-0 flex-col md:flex-row">
+                  <h4 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">Template Fields ({currentTemplate.fields.length})</h4>
+                  <Button className="w-full md:w-auto" onClick={() => openFieldEditor(undefined, "create")}>
                     ➕ Add New Field
                   </Button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 max-h-96 overflow-y-auto">
                   {currentTemplate.fields.map((field) => (
                     <div
                       key={field.id}
-                      className={`p-4 border-2 rounded-lg transition-all duration-300 ${
+                      className={`p-3 md:p-4 border-2 rounded-lg transition-all duration-300 ${
                         selectedField?.id === field.id ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 dark:border-gray-700"
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{field.label}</span>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{field.label}</span>
                         <span className="text-xs text-gray-500 dark:text-gray-400">{field.type}</span>
                       </div>
 
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-2 break-words">
                         {field.type === "image" || field.type === "signature" ? (
                           <span className="italic">{field.value ? "Image selected" : "No image"}</span>
                         ) : (
@@ -2065,8 +2162,8 @@ export default function AdvancedBillGeneratorPage() {
                         <div>Align: {field.alignment}</div>
                       </div>
 
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={() => openFieldEditor(field, "edit")}>Edit</Button>
+                      <div className="flex gap-2 flex-wrap">
+                        <Button className="flex-1 sm:flex-none" size="sm" onClick={() => openFieldEditor(field, "edit")}>Edit</Button>
                         <Button
                           size="sm"
                           variant="destructive"
@@ -2101,10 +2198,57 @@ export default function AdvancedBillGeneratorPage() {
           </div>
         )}
 
+        {/* New Template Chooser Modal */}
+        {showNewTemplateChooser && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-0 md:p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-none md:rounded-xl p-4 md:p-6 w-full h-full md:h-auto md:max-w-2xl md:mx-4 overflow-y-auto">
+              <div className="flex items-start justify-between mb-4">
+                <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Create New Template</h3>
+                <button
+                  aria-label="Close chooser"
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
+                  onClick={() => setShowNewTemplateChooser(false)}
+                >
+                  ✖
+                </button>
+              </div>
+              <p className="text-gray-600 dark:text-gray-300 mb-6">Choose how you want to start your template.</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="border-2 hover:border-blue-500 transition-colors">
+                  <CardHeader>
+                    <CardTitle>Professional Template</CardTitle>
+                    <CardDescription>Start from a polished, pre-filled invoice layout</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Includes company header, client details, itemized table, and payment terms.</p>
+                    <Button className="w-full" onClick={createFromProfessional}>Use Professional</Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-2 hover:border-green-500 transition-colors">
+                  <CardHeader>
+                    <CardTitle>Empty Canvas</CardTitle>
+                    <CardDescription>Start from scratch with a blank page</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Perfect if you want full control over layout and fields.</p>
+                    <Button className="w-full" variant="secondary" onClick={createEmptyTemplate}>Start Empty</Button>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <Button variant="ghost" onClick={() => setShowNewTemplateChooser(false)}>Cancel</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Field Editor Modal */}
         {showFieldEditor && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-0 md:p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-none md:rounded-xl p-4 md:p-6 w-full h-full md:h-auto md:max-h-[90vh] md:max-w-2xl md:mx-4 overflow-y-auto">
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
                 {isFieldEditorMode === "create" ? "Add New Field" : "Edit Field"}
               </h3>
