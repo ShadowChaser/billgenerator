@@ -598,11 +598,11 @@ export default function PdfUpload({
   };
 
   return (
-    <div className="rounded-md border p-4 grid gap-4">
+    <div className="rounded-md ring-1 ring-inset p-4 grid gap-4 min-w-0 overflow-visible">
       <div className="text-sm font-semibold opacity-80">
         Auto-fill from PDF, Word, or Image (.pdf, .docx, .png, .jpg, .jpeg, .webp)
       </div>
-      <div className="text-xs rounded-md border border-amber-300 bg-amber-50 text-amber-800 p-3 flex items-start gap-2">
+      <div className="text-xs rounded-md ring-1 ring-amber-300 bg-amber-50 text-amber-800 p-3 flex items-start gap-2 break-words">
         <span className="select-none">⚠️</span>
         <div>
           <div className="font-semibold">Important</div>
@@ -613,14 +613,14 @@ export default function PdfUpload({
         </div>
       </div>
 
-      <div className="grid gap-2">
+      <div className="grid gap-2 min-w-0">
         <input
           ref={fileInputRef}
           type="file"
           accept=".pdf,.docx,.png,.jpg,.jpeg,.webp"
           onChange={handleFileUpload}
           disabled={disabled || isProcessing}
-          className="border rounded px-3 py-2 bg-transparent disabled:opacity-50"
+          className="ring-1 ring-inset rounded px-3 py-2 bg-transparent disabled:opacity-50 w-full"
         />
 
         {isProcessing && (
@@ -631,7 +631,7 @@ export default function PdfUpload({
 
         {error && <div className="text-sm text-red-600">{error}</div>}
 
-        {success && <div className="text-sm text-green-600">{success}</div>}
+        {success && <div className="text-sm text-green-600 break-words">{success}</div>}
 
         {success && onNextMonthBill && (
           <button
@@ -651,7 +651,7 @@ export default function PdfUpload({
           </button>
         )}
 
-        <div className="text-xs text-gray-500">
+        <div className="text-xs text-gray-500 break-words">
           Upload a PDF, DOCX, or image bill to automatically extract and fill in the form fields.
           Supported formats: PDF (.pdf), Word (.docx), Images (.png, .jpg, .jpeg, .webp). Supported fields: Landlord name, amount,
           rate, bill number, dates, and period. Best results with bills generated here; scanned or complex layouts may not parse fully.

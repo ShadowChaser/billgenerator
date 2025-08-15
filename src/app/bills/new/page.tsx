@@ -287,22 +287,24 @@ export default function NewBillPage() {
   }
 
   return (
-    <div className="grid gap-6 max-w-5xl mx-auto px-4 pt-6 sm:pt-8">
+    <div className="grid gap-6 max-w-5xl mx-auto px-3 sm:px-4 pt-6 sm:pt-8 pb-10 sm:pb-12 overflow-x-hidden min-w-0">
       <h1 className="text-2xl font-semibold">House Rent Bill</h1>
 
       <form
-        className="grid gap-6 w-full max-w-3xl mx-auto"
+        className="grid gap-6 w-full max-w-3xl mx-auto min-w-0 break-words"
         onSubmit={form.handleSubmit(onSubmit)}
       >
-        <PdfUpload
-          onFieldsExtracted={handleFieldsExtracted}
-          onNextMonthBill={handleNextMonthBill}
-          disabled={saving}
-        />
+        <div className="overflow-visible">
+          <PdfUpload
+            onFieldsExtracted={handleFieldsExtracted}
+            onNextMonthBill={handleNextMonthBill}
+            disabled={saving}
+          />
+        </div>
 
-        <div className="rounded-md border p-4 grid gap-4">
+        <div className="rounded-md ring-1 ring-inset p-3 sm:p-4 grid gap-3 sm:gap-4">
           <div className="text-sm font-semibold opacity-80">Bill details</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 min-w-0">
             <label className="grid gap-1">
               <span className="text-sm">Period (Month)</span>
               <Controller
@@ -327,7 +329,7 @@ export default function NewBillPage() {
                     showMonthYearPicker
                     showFullMonthYearPicker
                     placeholderText="Select month and year"
-                    className="border rounded px-3 py-2 bg-transparent w-full"
+                    className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
                   />
                 )}
               />
@@ -352,7 +354,7 @@ export default function NewBillPage() {
                     }}
                     dateFormat="dd/MM/yyyy"
                     placeholderText="Select date"
-                    className="border rounded px-3 py-2 bg-transparent w-full"
+                    className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
                   />
                 )}
               />
@@ -362,12 +364,12 @@ export default function NewBillPage() {
             </label>
           </div>
 
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 min-w-0">
             <label className="grid gap-1">
               <span className="text-sm">Bill Number</span>
               <div className="relative">
                 <input
-                  className="border rounded px-3 py-2 bg-transparent w-full pr-10"
+                  className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full pr-10"
                   placeholder="Enter bill number"
                   {...form.register("bill_number")}
                 />
@@ -401,14 +403,14 @@ export default function NewBillPage() {
           </div>
         </div>
 
-        <div className="rounded-md border p-4 grid gap-4">
+        <div className="rounded-md ring-1 ring-inset p-3 sm:p-4 grid gap-3 sm:gap-4">
           <div className="text-sm font-semibold opacity-80">Landlord</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 min-w-0">
             <div className="grid gap-2">
               <label className="grid gap-1">
                 <span className="text-sm">Landlord Name</span>
                 <input
-                  className="border rounded px-3 py-2 bg-transparent"
+                  className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
                   placeholder="Type landlord name"
                   {...form.register("landlord_name")}
                 />
@@ -434,7 +436,7 @@ export default function NewBillPage() {
                     }}
                     dateFormat="dd/MM/yyyy"
                     placeholderText="Select agreement date"
-                    className="border rounded px-3 py-2 bg-transparent w-full"
+                    className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
                   />
                 )}
               />
@@ -447,15 +449,15 @@ export default function NewBillPage() {
           </div>
         </div>
 
-        <div className="rounded-md border p-4 grid gap-4">
+        <div className="rounded-md ring-1 ring-inset p-3 sm:p-4 grid gap-3 sm:gap-4">
           <div className="text-sm font-semibold opacity-80">
             Payment & Signature
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 min-w-0">
             <label className="grid gap-1">
               <span className="text-sm">Rate (Rs./P.M)</span>
               <input
-                className="border rounded px-3 py-2 bg-transparent"
+                className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
                 placeholder="e.g. 12000"
                 {...form.register("rate")}
               />
@@ -468,7 +470,7 @@ export default function NewBillPage() {
             <label className="grid gap-1">
               <span className="text-sm">Amount (Rs.)</span>
               <input
-                className="border rounded px-3 py-2 bg-transparent"
+                className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
                 placeholder="e.g. 12000"
                 {...form.register("amount")}
               />
@@ -483,17 +485,17 @@ export default function NewBillPage() {
               <input
                 type="file"
                 accept="image/*"
-                className="border rounded px-3 py-2 bg-transparent"
+                className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
                 {...form.register("signature_file")}
               />
             </label>
           </div>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
           <button
             disabled={saving}
-            className="px-4 py-2 rounded bg-foreground text-background disabled:opacity-50"
+            className="px-4 py-2 rounded bg-foreground text-background disabled:opacity-50 w-full sm:w-auto"
             type="submit"
           >
             {saving ? "Saving..." : "Save & Preview"}
@@ -502,7 +504,7 @@ export default function NewBillPage() {
             <button
               type="button"
               onClick={exportPdf}
-              className="px-4 py-2 rounded border"
+              className="px-4 py-2 rounded ring-1 ring-inset w-full sm:w-auto"
             >
               Download PDF
             </button>
@@ -511,7 +513,7 @@ export default function NewBillPage() {
       </form>
 
       {previewHtml && (
-        <div className="mt-6 border rounded p-2 sm:p-4 responsive-pane w-full max-w-3xl mx-auto">
+        <div className="mt-6 ring-1 ring-inset rounded p-2 sm:p-4 responsive-pane w-full max-w-3xl mx-auto">
           <div className="text-sm font-semibold mb-2">Preview</div>
           <div ref={previewContainerRef} className="w-full overflow-auto">
             {/* Reserve scaled space to prevent clipping */}
