@@ -1123,28 +1123,37 @@ export default function AdvancedBillGeneratorPage() {
 
         // Handle multi-line text for textarea fields
         if (field.type === "textarea" && content.includes("\n")) {
+          const pad = 4; // small vertical padding to avoid edge clipping
           const lines = content.split("\n");
-          const lineHeight = (field.fontSize || 16) * 1.2;
+          const fontSize = field.fontSize || 16;
+          // Use metrics for ascent/descent if available
+          const mProbe = ctx.measureText("Mg");
+          const ascent = (mProbe.actualBoundingBoxAscent ?? fontSize * 0.8);
+          const descent = (mProbe.actualBoundingBoxDescent ?? fontSize * 0.2);
+          const boxHeight = ascent + descent;
+          const lineHeight = Math.max(boxHeight * 1.1, fontSize * 1.15);
           const totalTextHeight = lines.length * lineHeight;
-          let startY =
-            field.y + (field.height - totalTextHeight) / 2 + lineHeight / 2;
+          let startY = field.y + Math.max(pad, (field.height - totalTextHeight) / 2);
 
-          ctx.textBaseline = "middle";
+          ctx.textBaseline = "alphabetic";
           lines.forEach((line, index) => {
-            const y = startY + index * lineHeight;
-            if (y >= field.y && y <= field.y + field.height) {
-              ctx.fillText(line, tx, y, field.width - 16);
+            const baselineY = startY + index * lineHeight + ascent;
+            // draw only if full glyph box fits
+            if (baselineY + (descent) <= field.y + field.height - pad) {
+              ctx.fillText(line, tx, baselineY, field.width - 16);
             }
           });
         } else {
-          // Single line text
-          ctx.textBaseline = "middle";
-          ctx.fillText(
-            content,
-            tx,
-            field.y + field.height / 2,
-            field.width - 16
-          );
+          // Single line text using precise metrics centering
+          const pad = 4;
+          const fontSize = field.fontSize || 16;
+          const m = ctx.measureText(content || "Mg");
+          const ascent = (m.actualBoundingBoxAscent ?? fontSize * 0.8);
+          const descent = (m.actualBoundingBoxDescent ?? fontSize * 0.2);
+          const boxHeight = ascent + descent;
+          const baselineY = field.y + Math.max(pad, (field.height - boxHeight) / 2) + ascent;
+          ctx.textBaseline = "alphabetic";
+          ctx.fillText(content, tx, baselineY, field.width - 16);
         }
       }
 
@@ -2007,27 +2016,33 @@ const exportCurrentCanvasToPdf = () => {
   const canvas = canvasRef.current;
   if (!canvas || !currentTemplate) return;
 
-    const imgData = canvas.toDataURL("image/png");
-    // Use points; map canvas px to pt 1:1 for simplicity
+    // Render onto an offscreen canvas with generous padding to avoid edge clipping
+    const pad = 24; // pixels padding around image
+    const off = document.createElement("canvas");
+    // Use the backing resolution of the rendered canvas for maximum sharpness
+    off.width = canvas.width + pad * 2;
+    off.height = canvas.height + pad * 2;
+    const octx = off.getContext("2d");
+    if (!octx) return;
+    // White background
+    octx.fillStyle = "#ffffff";
+    octx.fillRect(0, 0, off.width, off.height);
+    // Copy without smoothing to preserve sharpness
+    octx.imageSmoothingEnabled = false;
+    try { (octx as any).imageSmoothingQuality = "high"; } catch {}
+    // Draw original canvas with padding
+    octx.drawImage(canvas, pad, pad);
+
+    const imgData = off.toDataURL("image/png"); // lossless PNG
+    // Use pixel units and disable compression to avoid softening
     const pdf = new jsPDF({
-      orientation:
-        currentTemplate.width > currentTemplate.height
-          ? "landscape"
-          : "portrait",
-      unit: "pt",
-      format: [currentTemplate.width, currentTemplate.height],
-      compress: true,
+      orientation: off.width > off.height ? "landscape" : "portrait",
+      unit: "px",
+      format: [off.width, off.height],
+      compress: false,
     });
-    pdf.addImage(
-      imgData,
-      "PNG",
-      0,
-      0,
-      currentTemplate.width,
-      currentTemplate.height,
-      undefined,
-      "FAST"
-    );
+    // Slight inset and -1 size reduce to avoid PDF viewer/printer edge clipping
+    pdf.addImage(imgData, "PNG", 0.5, 0.5, Math.max(1, off.width - 1), Math.max(1, off.height - 1));
     pdf.save(`${currentTemplate.name || "template"}.pdf`);
   };
 
@@ -2178,44 +2193,33 @@ const exportCurrentCanvasToPdf = () => {
       // Re-render to ensure latest state
       renderBillToCanvas(billCanvasRef.current, previewTemplate);
 
-      // Wait for images to load
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Wait a moment for any async image loads
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-      // Get canvas and convert to image
-      const canvas = billCanvasRef.current;
-      const imgData = canvas.toDataURL("image/png", 1.0);
+      // Use an offscreen canvas with padding to avoid clipping
+      const src = billCanvasRef.current;
+      const pad = 24;
+      const off = document.createElement("canvas");
+      off.width = src.width + pad * 2;
+      off.height = src.height + pad * 2;
+      const octx = off.getContext("2d");
+      if (!octx) return;
+      octx.fillStyle = "#ffffff";
+      octx.fillRect(0, 0, off.width, off.height);
+      octx.imageSmoothingEnabled = false;
+      try { (octx as any).imageSmoothingQuality = "high"; } catch {}
+      octx.drawImage(src, pad, pad);
 
-      // Calculate PDF dimensions (A4 size)
-      const pdfWidth = 210; // A4 width in mm
-      const pdfHeight = 297; // A4 height in mm
-      const canvasAspectRatio = canvas.width / canvas.height;
-
-      let imgWidth = pdfWidth - 20; // 10mm margin on each side
-      let imgHeight = imgWidth / canvasAspectRatio;
-
-      // If image is too tall, scale it down
-      if (imgHeight > pdfHeight - 20) {
-        imgHeight = pdfHeight - 20;
-        imgWidth = imgHeight * canvasAspectRatio;
-      }
-
-      // Create PDF
+      const imgData = off.toDataURL("image/png");
       const pdf = new jsPDF({
-        orientation: imgWidth > imgHeight ? "landscape" : "portrait",
-        unit: "mm",
-        format: "a4",
+        orientation: off.width > off.height ? "landscape" : "portrait",
+        unit: "px",
+        format: [off.width, off.height],
+        compress: false,
       });
+      pdf.addImage(imgData, "PNG", 0.5, 0.5, Math.max(1, off.width - 1), Math.max(1, off.height - 1));
 
-      // Center the image
-      const x = (pdfWidth - imgWidth) / 2;
-      const y = (pdfHeight - imgHeight) / 2;
-
-      pdf.addImage(imgData, "PNG", x, y, imgWidth, imgHeight);
-
-      // Save the PDF
-      const fileName = `${previewTemplate.name
-        .replace(/[^a-z0-9]/gi, "_")
-        .toLowerCase()}_bill.pdf`;
+      const fileName = `${previewTemplate.name.replace(/[^a-z0-9]/gi, "_").toLowerCase()}_bill.pdf`;
       pdf.save(fileName);
     } catch (error) {
       console.error("PDF export failed:", error);
