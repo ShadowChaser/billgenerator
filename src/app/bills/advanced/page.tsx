@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import jsPDF from "jspdf";
 
 // Types
 interface SubElement {
@@ -1481,7 +1482,19 @@ export default function AdvancedBillGeneratorPage() {
   };
 
   const exportCurrentCanvasToPdf = () => {
-    alert("Export to PDF not implemented in this demo.");
+    const canvas = canvasRef.current;
+    if (!canvas || !currentTemplate) return;
+
+    const imgData = canvas.toDataURL("image/png");
+    // Use points; map canvas px to pt 1:1 for simplicity
+    const pdf = new jsPDF({
+      orientation: currentTemplate.width > currentTemplate.height ? "landscape" : "portrait",
+      unit: "pt",
+      format: [currentTemplate.width, currentTemplate.height],
+      compress: true,
+    });
+    pdf.addImage(imgData, "PNG", 0, 0, currentTemplate.width, currentTemplate.height, undefined, "FAST");
+    pdf.save(`${currentTemplate.name || "template"}.pdf`);
   };
 
   const onUploadImageForField = (fieldId: string, file: File) => {
@@ -1920,7 +1933,6 @@ export default function AdvancedBillGeneratorPage() {
                 <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{currentTemplate.name}</h3>
                 <p className="text-gray-600 dark:text-gray-400">{currentTemplate.fields.length} fields • Advanced styling enabled</p>
               </div>
-
               <div className="flex flex-wrap gap-3">
                 {!isEditing ? (
                   <Button onClick={() => setIsEditing(true)}>✏️ Edit Template</Button>
@@ -1929,35 +1941,6 @@ export default function AdvancedBillGeneratorPage() {
                     <Button onClick={() => openFieldEditor(undefined, "create")}>➕ Add Field</Button>
                     <Button variant="gradient" onClick={exportCurrentCanvasToPdf}>🖨️ Export PDF</Button>
                     <Button variant="success" onClick={saveTemplate}>💾 Save Template</Button>
-                    <Button variant="secondary" onClick={() => setShowTemplateSettings(true)}>⚙️ Settings</Button>
-
-                    {/* Undo/Redo Controls */}
-                    <div className="flex items-center gap-2 ml-4 pl-4 border-l border-gray-300 dark:border-gray-600">
-                      <Button
-                        variant="secondary"
-                        onClick={undo}
-                        disabled={undoStack.length === 0}
-                        title="Undo (Ctrl+Z)"
-                        className="flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                        </svg>
-                        Undo
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        onClick={redo}
-                        disabled={redoStack.length === 0}
-                        title="Redo (Ctrl+Shift+Z)"
-                        className="flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10h-10a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6" />
-                        </svg>
-                        Redo
-                      </Button>
-                    </div>
                   </>
                 )}
               </div>
