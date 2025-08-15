@@ -1,16 +1,15 @@
 "use client";
 
+// Disable static prerender to avoid server evaluating browser-only libs
+export const dynamic = "force-dynamic";
+
 import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { v4 as uuidv4 } from "uuid";
 
-// pdf.js (use CDN worker to avoid bundler issues)
-import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
-
-// Use a stable CDN URL matching the installed version in package.json (pdfjs-dist@5.4.54)
-GlobalWorkerOptions.workerSrc = "https://unpkg.com/pdfjs-dist@5.4.54/build/pdf.worker.min.mjs";
+// NOTE: pdfjs-dist is dynamically imported client-side to avoid SSR/prerender crashes
 
 const INBOX_KEY = "hrb_custom_inbox_template_v1";
 
@@ -49,6 +48,9 @@ export default function PdfToTemplatePage() {
     (async () => {
       if (!pdfArrayBuffer) return;
       try {
+        // Dynamically import pdfjs only in the browser
+        const { getDocument, GlobalWorkerOptions } = await import("pdfjs-dist");
+        GlobalWorkerOptions.workerSrc = "https://unpkg.com/pdfjs-dist@5.4.54/build/pdf.worker.min.mjs";
         const loadingTask = getDocument({ data: pdfArrayBuffer });
         const pdf = await loadingTask.promise;
         if (cancelled) return;
