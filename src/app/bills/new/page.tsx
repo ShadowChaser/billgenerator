@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { billFormSchema, type BillFormInput } from "@/lib/validation";
@@ -47,6 +47,10 @@ export default function NewBillPage() {
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [saving, setSaving] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const previewContainerRef = useRef<HTMLDivElement | null>(null);
+  const [previewScale, setPreviewScale] = useState(1);
+  const previewInnerRef = useRef<HTMLDivElement | null>(null);
+  const [baseHeight, setBaseHeight] = useState(1123);
 
   const form = useForm<BillFormInput>({
     resolver: zodResolver(billFormSchema),
@@ -64,6 +68,39 @@ export default function NewBillPage() {
     setLandlords(getLandlordsLocal());
     form.setValue("landlord_mode", "manual");
   }, [form]);
+
+  // Resize preview to fit container without cutting content
+  useEffect(() => {
+    const updateScale = () => {
+      if (!previewHtml) return;
+      const container = previewContainerRef.current;
+      if (!container) return;
+      const containerWidth = container.clientWidth;
+      const baseWidth = 794; // A4 width at ~96dpi
+      const scale = Math.min(1, containerWidth / baseWidth);
+      setPreviewScale(scale);
+    };
+    updateScale();
+    if (typeof window !== "undefined") {
+      window.addEventListener("resize", updateScale);
+      return () => window.removeEventListener("resize", updateScale);
+    }
+  }, [previewHtml]);
+
+  // Measure actual content height (unscaled) and reserve scaled space
+  useEffect(() => {
+    const measure = () => {
+      const el = previewInnerRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const scaledHeight = rect.height; // current scaled height
+      const computedBase = Math.max(1123, Math.round(scaledHeight / Math.max(previewScale, 0.001)));
+      setBaseHeight(computedBase);
+    };
+    // Allow DOM to paint before measuring
+    const r = requestAnimationFrame(measure);
+    return () => cancelAnimationFrame(r);
+  }, [previewHtml, previewScale]);
 
   const landlordNameManual = form.watch("landlord_name")?.trim() ?? "";
 
@@ -152,7 +189,7 @@ export default function NewBillPage() {
       );
       const periodDisplay = monthInputToDisplay(values.period);
       const html = `
-        <div style="position:relative; font-family:'Times New Roman', Times, serif; color:#000; width:794px; min-height:1123px; margin:0 auto; padding:24px 36px 180px 36px; background:#ffffff; box-sizing:border-box; overflow:visible;">
+        <div style="position:relative; font-family:'Times New Roman', Times, serif; color:#000; width:794px; min-height:1123px; margin:0 auto; padding:24px 20px 180px 20px; background:#ffffff; box-sizing:border-box; overflow:visible;">
           <div style="text-align:center; font-weight:700; font-size:18pt; text-decoration: underline;">HOUSE RENT BILL</div>
 
           <div style="margin-top:20px; font-size:12pt;">
@@ -163,7 +200,7 @@ export default function NewBillPage() {
             </div>
           </div>
 
-          <div style="margin-top:28px; font-size:12pt; line-height:1.45; max-width:640px;">
+          <div style="margin-top:28px; font-size:12pt; line-height:1.45; max-width:100%;">
             <div style="font-size:14pt;">Sir,</div>
             <div>
               I am submitting the House rent bill of Smt. ${landlordName} (Private House) for accommodation of BtED,
@@ -190,7 +227,7 @@ export default function NewBillPage() {
             </tbody>
           </table>
 
-          <div style="position:absolute; right:36px; bottom:48px; text-align:right;">
+          <div style="position:absolute; right:20px; bottom:48px; text-align:right;">
             ${
               signatureUrl
                 ? `<img src="${signatureUrl}" alt="Signature" style="width:180px; height:auto; display:block; margin:0 0 8px auto;">`
@@ -465,9 +502,29 @@ export default function NewBillPage() {
       </form>
 
       {previewHtml && (
-        <div className="mt-6 border rounded p-4 responsive-pane">
+        <div className="mt-6 border rounded p-2 sm:p-4 responsive-pane">
           <div className="text-sm font-semibold mb-2">Preview</div>
-          <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
+          <div ref={previewContainerRef} className="w-full overflow-auto">
+            {/* Reserve scaled space to prevent clipping */}
+            <div
+              className="mx-auto"
+              style={{
+                width: `${Math.round(794 * previewScale)}px`,
+                height: `${Math.round(baseHeight * previewScale)}px`,
+                position: "relative",
+              }}
+            >
+              <div
+                ref={previewInnerRef}
+                style={{
+                  transform: `scale(${previewScale})`,
+                  transformOrigin: "top left",
+                  width: "794px",
+                }}
+                dangerouslySetInnerHTML={{ __html: previewHtml }}
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>
