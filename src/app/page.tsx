@@ -39,7 +39,7 @@ export default function Home() {
           className="text-center"
         >
           <motion.div variants={fadeInUp}>
-            <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs sm:text-sm opacity-80">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-xs sm:text-sm bg-gradient-to-r from-blue-500/10 via-teal-500/10 to-indigo-500/10">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
               Instant PDF bills, zero hassle
             </span>
@@ -47,14 +47,14 @@ export default function Home() {
 
           <motion.h1
             variants={fadeInUp}
-            className="mt-6 text-4xl sm:text-5xl font-extrabold tracking-tight"
+            className="mt-6 text-4xl sm:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-teal-400 to-indigo-400 dark:from-blue-300 dark:via-teal-300 dark:to-indigo-300"
           >
             BillMate
           </motion.h1>
 
           <motion.p
             variants={fadeInUp}
-            className="mt-4 max-w-2xl mx-auto text-base sm:text-lg opacity-80"
+            className="mt-4 max-w-2xl mx-auto text-base sm:text-lg text-transparent bg-clip-text bg-gradient-to-r from-white/85 to-white/60 dark:from-white/85 dark:to-white/60"
           >
             Create professional rent bills with auto-fill, PDF/Word/Image upload parsing, and one-click export.
           </motion.p>
