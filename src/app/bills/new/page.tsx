@@ -32,6 +32,10 @@ const monthNames = [
   "DECEMBER",
 ];
 
+// Keep keys in sync with advanced editor
+const TEMPLATES_KEY = "hrb_templates_v1";
+const LAST_TEMPLATE_KEY = "hrb_last_template_id_v1";
+
 function buildPeriodFromDate(date: Date) {
   return format(date, "yyyy-MM");
 }
@@ -188,72 +192,129 @@ export default function NewBillPage() {
   };
 
   const submitFromTemplate = async () => {
+    // For template preview, do not block on full bill validation (landlord_name, etc.)
+    // Just sync helpful fields into RHF for later submission and render preview now.
     setTemplateErrors([]);
     syncTemplateToForm();
-    // Wait for RHF to register values and validate
     await new Promise((r) => setTimeout(r, 0));
+    if (selectedTemplate) {
+      const html = buildTemplatePreviewHtml(selectedTemplate, templateForm);
+      setPreviewHtml(html);
+      return;
+    }
+    // Fallback: if no template somehow, run normal validation/submit
     const ok = await form.trigger();
     if (ok) {
       form.handleSubmit(onSubmit)();
     } else {
       const errs = Object.entries(form.formState.errors).map(([k, v]) => `${k}: ${(v as any)?.message || "Invalid"}`);
       setTemplateErrors(errs);
-      // Scroll to top of template section if needed
       if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
-  useEffect(() => {
+  const loadTemplates = () => {
     try {
-      if (typeof window !== "undefined") {
-        const raw = window.localStorage.getItem("hrb_templates_v1");
-        if (raw) {
-          const arr = JSON.parse(raw);
-          if (Array.isArray(arr)) {
-            setTemplates(
-              arr.map((t: any) => ({
-                id: String(t.id ?? ""),
-                name: String(t.name ?? "Unnamed Template"),
-                description: typeof t.description === "string" ? t.description : undefined,
-                width: typeof t.width === "number" ? t.width : undefined,
-                height: typeof t.height === "number" ? t.height : undefined,
-                fields: Array.isArray(t.fields) ? t.fields.map((f: any) => ({
-                  id: String(f.id ?? ""),
-                  label: String(f.label ?? "Field"),
-                  value: typeof f.value === "string" ? f.value : "",
-                  type: (
-                    f.type === "text" ||
-                    f.type === "number" ||
-                    f.type === "date" ||
-                    f.type === "amount" ||
-                    f.type === "textarea" ||
-                    f.type === "select" ||
-                    f.type === "image" ||
-                    f.type === "signature"
-                  )
-                    ? (f.type as TemplateField["type"]) : "text",
-                  placeholder: typeof f.placeholder === "string" ? f.placeholder : undefined,
-                  options: Array.isArray(f.options) ? f.options.map((o: any) => String(o)) : undefined,
-                  required: Boolean(f.required),
-                  x: typeof f.x === "number" ? f.x : undefined,
-                  y: typeof f.y === "number" ? f.y : undefined,
-                  width: typeof f.width === "number" ? f.width : undefined,
-                  height: typeof f.height === "number" ? f.height : undefined,
-                  fontSize: typeof f.fontSize === "number" ? f.fontSize : undefined,
-                  isBold: Boolean(f.isBold),
-                  isItalic: Boolean(f.isItalic),
-                  textColor: typeof f.textColor === "string" ? f.textColor : undefined,
-                  backgroundColor: typeof f.backgroundColor === "string" ? f.backgroundColor : undefined,
-                  borderColor: typeof f.borderColor === "string" ? f.borderColor : undefined,
-                  borderWidth: typeof f.borderWidth === "number" ? f.borderWidth : undefined,
-                  borderRadius: typeof f.borderRadius === "number" ? f.borderRadius : undefined,
-                  alignment: f.alignment === "center" || f.alignment === "right" ? f.alignment : "left",
-                })) : [],
-              }))
-            );
+      if (typeof window === "undefined") return;
+      const raw = window.localStorage.getItem(TEMPLATES_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      // eslint-disable-next-line no-console
+      console.log("[NewBill] Read templates from localStorage:", Array.isArray(arr) ? arr.length : 0);
+      if (Array.isArray(arr)) {
+        const nextTemplates: FullTemplate[] = arr.map((t: any, tplIdx: number) => ({
+          // Ensure a non-empty, stable-ish id for selection
+          id: (() => {
+            const raw = String(t.id ?? "").trim();
+            if (raw) return raw;
+            const base = (t.name ? String(t.name) : "Template").replace(/\s+/g, "-").toLowerCase();
+            return `tpl-${base}-${tplIdx}`;
+          })(),
+          name: String(t.name ?? "Unnamed Template"),
+          description: typeof t.description === "string" ? t.description : undefined,
+          width: typeof t.width === "number" ? t.width : undefined,
+          height: typeof t.height === "number" ? t.height : undefined,
+          fields: Array.isArray(t.fields) ? t.fields.map((f: any, idx: number) => ({
+            id: String((f.id ?? "") || `${(f.label ?? "Field").toString().replace(/\s+/g, "_")}_${idx}`),
+            label: String(f.label ?? "Field"),
+            value: typeof f.value === "string" ? f.value : "",
+            type: (
+              f.type === "text" ||
+              f.type === "number" ||
+              f.type === "date" ||
+              f.type === "amount" ||
+              f.type === "textarea" ||
+              f.type === "select" ||
+              f.type === "image" ||
+              f.type === "signature"
+            ) ? (f.type as TemplateField["type"]) : "text",
+            placeholder: typeof f.placeholder === "string" ? f.placeholder : undefined,
+            options: Array.isArray(f.options) ? f.options.map((o: any) => String(o)) : undefined,
+            required: Boolean(f.required),
+            x: typeof f.x === "number" ? f.x : undefined,
+            y: typeof f.y === "number" ? f.y : undefined,
+            width: typeof f.width === "number" ? f.width : undefined,
+            height: typeof f.height === "number" ? f.height : undefined,
+            fontSize: typeof f.fontSize === "number" ? f.fontSize : undefined,
+            isBold: Boolean(f.isBold),
+            isItalic: Boolean(f.isItalic),
+            textColor: typeof f.textColor === "string" ? f.textColor : undefined,
+            backgroundColor: typeof f.backgroundColor === "string" ? f.backgroundColor : undefined,
+            borderColor: typeof f.borderColor === "string" ? f.borderColor : undefined,
+            borderWidth: typeof f.borderWidth === "number" ? f.borderWidth : undefined,
+            borderRadius: typeof f.borderRadius === "number" ? f.borderRadius : undefined,
+            alignment: f.alignment === "center" || f.alignment === "right" ? f.alignment : "left",
+          })) : [],
+        }));
+
+        setTemplates(nextTemplates);
+        // eslint-disable-next-line no-console
+        console.log("[NewBill] Normalized templates:", nextTemplates.length);
+
+        // Auto-select last opened template if available; otherwise keep current selection if valid; else pick first
+        try {
+          const lastId = window.localStorage.getItem(LAST_TEMPLATE_KEY) || "";
+          const hasLast = lastId && nextTemplates.some((t) => t.id === lastId);
+          if (hasLast) {
+            setSelectedTemplateId((prev) => (prev && prev === lastId ? prev : lastId));
+            // eslint-disable-next-line no-console
+            console.log("[NewBill] Selected last template id:", lastId);
+          } else {
+            setSelectedTemplateId((prev) => {
+              if (prev && nextTemplates.some((t) => t.id === prev)) return prev;
+              const fallback = nextTemplates.length > 0 ? nextTemplates[0].id : "";
+              // eslint-disable-next-line no-console
+              console.log("[NewBill] Selected fallback template id:", fallback);
+              return fallback;
+            });
           }
-        }
+        } catch {}
       }
     } catch {}
+  };
+
+  // Initial load and live refresh when localStorage changes in another tab/page
+  useEffect(() => {
+    loadTemplates();
+    if (typeof window === "undefined") return;
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === TEMPLATES_KEY) {
+        // eslint-disable-next-line no-console
+        console.log("[NewBill] storage event -> reload templates");
+        loadTemplates();
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        // eslint-disable-next-line no-console
+        console.log("[NewBill] visibilitychange -> reload templates");
+        loadTemplates();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   // Build HTML for a selected template using absolute positioning
@@ -312,18 +373,23 @@ export default function NewBillPage() {
       `</body></html>`;
   };
 
-  // Initialize dynamic field values whenever a new template is selected
+  // Initialize/merge dynamic field values whenever selected template OR templates list changes
   useEffect(() => {
     if (selectedTemplate) {
-      const init: Record<string, string> = {};
-      selectedTemplate.fields.forEach((f) => {
-        init[f.id] = (f.value ?? "").toString();
+      setTemplateForm((prev) => {
+        const next: Record<string, string> = { ...prev };
+        // Drop keys no longer in template; add any new fields with their default value
+        const validIds = new Set(selectedTemplate.fields.map((f) => f.id));
+        Object.keys(next).forEach((k) => { if (!validIds.has(k)) delete next[k]; });
+        selectedTemplate.fields.forEach((f) => {
+          if (!(f.id in next)) next[f.id] = (f.value ?? "").toString();
+        });
+        return next;
       });
-      setTemplateForm(init);
     } else {
       setTemplateForm({});
     }
-  }, [selectedTemplateId]);
+  }, [selectedTemplateId, templates]);
 
   useEffect(() => {
     const list = getLandlordsLocal();
@@ -611,13 +677,22 @@ export default function NewBillPage() {
 
       {/* Template (optional) selector */}
       <div className="rounded-md ring-1 ring-inset p-3 sm:p-4 grid gap-3 w-full max-w-3xl mx-auto">
-        <div className="text-sm font-semibold opacity-80">Template (optional)</div>
+        <div className="flex items-center gap-2">
+          <div className="text-sm font-semibold opacity-80">Template (optional)</div>
+          <button
+            type="button"
+            className="text-xs px-2 py-1 rounded ring-1 ring-inset"
+            onClick={loadTemplates}
+            title="Reload templates"
+          >Reload</button>
+        </div>
         <label className="grid gap-1">
           <span className="text-sm">Choose a saved template</span>
           <select
             className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
             value={selectedTemplateId}
             onChange={(e) => setSelectedTemplateId(e.target.value)}
+            onFocus={loadTemplates}
           >
             <option value="">— None (use default House Bill) —</option>
             {templates.map((t) => (
