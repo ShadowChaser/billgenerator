@@ -1,8 +1,20 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import jsPDF from "jspdf";
 import { readArrayKey, writeArrayKey } from "@/lib/localStore";
 
@@ -74,7 +86,8 @@ export default function AdvancedBillGeneratorPage() {
     const sampleTemplate: Template = {
       id: "tpl-1",
       name: "Professional Invoice Template",
-      description: "A complete invoice template with company header, client details, and itemized billing",
+      description:
+        "A complete invoice template with company header, client details, and itemized billing",
       width: 800,
       height: 1120,
       createdAt: new Date(),
@@ -98,12 +111,13 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 0,
           borderRadius: 0,
           alignment: "left",
-          required: true
+          required: true,
         },
         {
           id: "company-address",
           label: "Company Address",
-          value: "123 Business Street\nCity, State 12345\nPhone: (555) 123-4567\nEmail: info@company.com",
+          value:
+            "123 Business Street\nCity, State 12345\nPhone: (555) 123-4567\nEmail: info@company.com",
           type: "textarea",
           x: 50,
           y: 80,
@@ -118,7 +132,7 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 0,
           borderRadius: 0,
           alignment: "left",
-          required: false
+          required: false,
         },
         // Invoice Title
         {
@@ -139,7 +153,7 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 0,
           borderRadius: 0,
           alignment: "right",
-          required: true
+          required: true,
         },
         // Invoice Details
         {
@@ -160,7 +174,7 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 0,
           borderRadius: 0,
           alignment: "right",
-          required: true
+          required: true,
         },
         {
           id: "invoice-date",
@@ -180,7 +194,7 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 0,
           borderRadius: 0,
           alignment: "right",
-          required: true
+          required: true,
         },
         // Bill To Section
         {
@@ -201,12 +215,13 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 0,
           borderRadius: 0,
           alignment: "left",
-          required: false
+          required: false,
         },
         {
           id: "client-details",
           label: "Client Details",
-          value: "Client Company Name\nClient Address Line 1\nClient Address Line 2\nCity, State ZIP\nPhone: (555) 987-6543",
+          value:
+            "Client Company Name\nClient Address Line 1\nClient Address Line 2\nCity, State ZIP\nPhone: (555) 987-6543",
           type: "textarea",
           x: 50,
           y: 240,
@@ -221,7 +236,7 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 1,
           borderRadius: 4,
           alignment: "left",
-          required: true
+          required: true,
         },
         // Table Header Row
         {
@@ -242,7 +257,7 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 1,
           borderRadius: 0,
           alignment: "left",
-          required: false
+          required: false,
         },
         {
           id: "header-qty",
@@ -262,7 +277,7 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 1,
           borderRadius: 0,
           alignment: "center",
-          required: false
+          required: false,
         },
         {
           id: "header-rate",
@@ -282,7 +297,7 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 1,
           borderRadius: 0,
           alignment: "center",
-          required: false
+          required: false,
         },
         {
           id: "header-amount",
@@ -302,7 +317,7 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 1,
           borderRadius: 0,
           alignment: "center",
-          required: false
+          required: false,
         },
         // Item 1 Row
         {
@@ -323,7 +338,7 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 1,
           borderRadius: 0,
           alignment: "left",
-          required: false
+          required: false,
         },
         {
           id: "item1-qty",
@@ -343,7 +358,7 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 1,
           borderRadius: 0,
           alignment: "center",
-          required: false
+          required: false,
         },
         {
           id: "item1-rate",
@@ -363,7 +378,7 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 1,
           borderRadius: 0,
           alignment: "right",
-          required: false
+          required: false,
         },
         {
           id: "item1-amount",
@@ -383,7 +398,7 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 1,
           borderRadius: 0,
           alignment: "right",
-          required: false
+          required: false,
         },
         // Item 2 Row
         {
@@ -404,7 +419,7 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 1,
           borderRadius: 0,
           alignment: "left",
-          required: false
+          required: false,
         },
         {
           id: "item2-qty",
@@ -424,7 +439,7 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 1,
           borderRadius: 0,
           alignment: "center",
-          required: false
+          required: false,
         },
         {
           id: "item2-rate",
@@ -444,7 +459,7 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 1,
           borderRadius: 0,
           alignment: "right",
-          required: false
+          required: false,
         },
         {
           id: "item2-amount",
@@ -464,7 +479,7 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 1,
           borderRadius: 0,
           alignment: "right",
-          required: false
+          required: false,
         },
         // Totals Section
         {
@@ -485,7 +500,7 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 0,
           borderRadius: 0,
           alignment: "right",
-          required: false
+          required: false,
         },
         {
           id: "tax",
@@ -505,7 +520,7 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 0,
           borderRadius: 0,
           alignment: "right",
-          required: false
+          required: false,
         },
         {
           id: "total",
@@ -525,13 +540,14 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 2,
           borderRadius: 4,
           alignment: "right",
-          required: true
+          required: true,
         },
         // Payment Terms
         {
           id: "payment-terms",
           label: "Payment Terms",
-          value: "Payment Terms:\n• Payment is due within 30 days of invoice date\n• Late payments may incur a 1.5% monthly service charge\n• Please include invoice number with payment\n\nThank you for your business!",
+          value:
+            "Payment Terms:\n• Payment is due within 30 days of invoice date\n• Late payments may incur a 1.5% monthly service charge\n• Please include invoice number with payment\n\nThank you for your business!",
           type: "textarea",
           x: 50,
           y: 680,
@@ -546,26 +562,20 @@ export default function AdvancedBillGeneratorPage() {
           borderWidth: 1,
           borderRadius: 4,
           alignment: "left",
-          required: false
-        }
+          required: false,
+        },
       ],
     };
-    // Try to load stored templates
-    try {
-      const stored = readArrayKey<any>(TEMPLATES_KEY);
-      if (stored && stored.length) {
-        return stored.map((t: any) => ({
-          ...t,
-          createdAt: t.createdAt ? new Date(t.createdAt) : new Date(),
-        }));
-      }
-    } catch {}
+    // Important: don't read localStorage during initial render to avoid SSR/CSR mismatches
+    // We'll load any stored templates after mount in a useEffect.
     return [sampleTemplate];
   });
 
   const [currentTemplate, setCurrentTemplate] = useState<Template | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [selectedField, setSelectedField] = useState<TemplateField | null>(null);
+  const [selectedField, setSelectedField] = useState<TemplateField | null>(
+    null
+  );
   const [showTemplateSettings, setShowTemplateSettings] = useState(false);
 
   // New template chooser modal
@@ -576,12 +586,19 @@ export default function AdvancedBillGeneratorPage() {
 
   // Drag to move
   const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
 
   // Resize state
   const [isResizing, setIsResizing] = useState(false);
   const [resizeHandle, setResizeHandle] = useState<ResizeHandle>(null);
-  const resizeOriginRef = useRef<{ startX: number; startY: number; field: TemplateField | null }>({
+  const resizeOriginRef = useRef<{
+    startX: number;
+    startY: number;
+    field: TemplateField | null;
+  }>({
     startX: 0,
     startY: 0,
     field: null,
@@ -589,17 +606,30 @@ export default function AdvancedBillGeneratorPage() {
 
   // Field editor modal
   const [showFieldEditor, setShowFieldEditor] = useState(false);
-  const [isFieldEditorMode, setIsFieldEditorMode] = useState<"create" | "edit">("create");
-  const [fieldEditorData, setFieldEditorData] = useState<Partial<TemplateField>>({});
+  const [isFieldEditorMode, setIsFieldEditorMode] = useState<"create" | "edit">(
+    "create"
+  );
+  const [fieldEditorData, setFieldEditorData] = useState<
+    Partial<TemplateField>
+  >({});
 
   // Inline text editing
-  const [inlineEditField, setInlineEditField] = useState<TemplateField | null>(null);
+  const [inlineEditField, setInlineEditField] = useState<TemplateField | null>(
+    null
+  );
   const [inlineEditValue, setInlineEditValue] = useState("");
-  const [inlineEditPosition, setInlineEditPosition] = useState<{x: number; y: number; width: number; height: number} | null>(null);
+  const [inlineEditPosition, setInlineEditPosition] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const inlineInputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
   // Template name inline editing
-  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(
+    null
+  );
   const [editingTemplateName, setEditingTemplateName] = useState("");
 
   // Bill generation and preview
@@ -622,8 +652,11 @@ export default function AdvancedBillGeneratorPage() {
   useEffect(() => {
     if (!currentTemplate && templates.length > 0) {
       try {
-        const lastId = typeof window !== 'undefined' ? window.localStorage.getItem(LAST_TEMPLATE_KEY) : null;
-        const found = lastId ? templates.find(t => t.id === lastId) : null;
+        const lastId =
+          typeof window !== "undefined"
+            ? window.localStorage.getItem(LAST_TEMPLATE_KEY)
+            : null;
+        const found = lastId ? templates.find((t) => t.id === lastId) : null;
         setCurrentTemplate(found || templates[0]);
       } catch {
         setCurrentTemplate(templates[0]);
@@ -634,7 +667,7 @@ export default function AdvancedBillGeneratorPage() {
   // Persist last-opened template id
   useEffect(() => {
     try {
-      if (currentTemplate && typeof window !== 'undefined') {
+      if (currentTemplate && typeof window !== "undefined") {
         window.localStorage.setItem(LAST_TEMPLATE_KEY, currentTemplate.id);
       }
     } catch {}
@@ -643,7 +676,11 @@ export default function AdvancedBillGeneratorPage() {
   // Persist templates to localStorage whenever they change
   useEffect(() => {
     try {
-      const serializable = templates.map(t => ({ ...t, createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt }));
+      const serializable = templates.map((t) => ({
+        ...t,
+        createdAt:
+          t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt,
+      }));
       writeArrayKey(TEMPLATES_KEY, serializable as any);
     } catch {}
   }, [templates]);
@@ -651,10 +688,10 @@ export default function AdvancedBillGeneratorPage() {
   // Save state for undo/redo
   const saveStateForUndo = useCallback(() => {
     if (currentTemplate) {
-      setUndoStack(prev => {
+      setUndoStack((prev) => {
         const clonedTemplate = {
           ...JSON.parse(JSON.stringify(currentTemplate)),
-          createdAt: new Date(currentTemplate.createdAt)
+          createdAt: new Date(currentTemplate.createdAt),
         };
         const newStack = [...prev, clonedTemplate];
         return newStack.slice(-maxUndoSteps);
@@ -666,42 +703,46 @@ export default function AdvancedBillGeneratorPage() {
   // Undo function
   const undo = useCallback(() => {
     if (undoStack.length === 0 || !currentTemplate) return;
-    
+
     const previousState = undoStack[undoStack.length - 1];
     const newUndoStack = undoStack.slice(0, -1);
-    
+
     // Save current state to redo stack
     const clonedCurrent = {
       ...JSON.parse(JSON.stringify(currentTemplate)),
-      createdAt: new Date(currentTemplate.createdAt)
+      createdAt: new Date(currentTemplate.createdAt),
     };
-    setRedoStack(prev => [...prev, clonedCurrent]);
+    setRedoStack((prev) => [...prev, clonedCurrent]);
     setUndoStack(newUndoStack);
-    
+
     // Restore previous state
     setCurrentTemplate(previousState);
-    setTemplates(prev => prev.map(t => t.id === previousState.id ? previousState : t));
+    setTemplates((prev) =>
+      prev.map((t) => (t.id === previousState.id ? previousState : t))
+    );
     setSelectedField(null);
   }, [undoStack, currentTemplate]);
 
   // Redo function
   const redo = useCallback(() => {
     if (redoStack.length === 0 || !currentTemplate) return;
-    
+
     const nextState = redoStack[redoStack.length - 1];
     const newRedoStack = redoStack.slice(0, -1);
-    
+
     // Save current state to undo stack
     const clonedCurrent = {
       ...JSON.parse(JSON.stringify(currentTemplate)),
-      createdAt: new Date(currentTemplate.createdAt)
+      createdAt: new Date(currentTemplate.createdAt),
     };
-    setUndoStack(prev => [...prev, clonedCurrent]);
+    setUndoStack((prev) => [...prev, clonedCurrent]);
     setRedoStack(newRedoStack);
-    
+
     // Restore next state
     setCurrentTemplate(nextState);
-    setTemplates(prev => prev.map(t => t.id === nextState.id ? nextState : t));
+    setTemplates((prev) =>
+      prev.map((t) => (t.id === nextState.id ? nextState : t))
+    );
     setSelectedField(null);
   }, [redoStack, currentTemplate]);
 
@@ -709,19 +750,22 @@ export default function AdvancedBillGeneratorPage() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Skip if typing in an input field
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
         return;
       }
-      
+
       if (e.ctrlKey || e.metaKey) {
-        if (e.key === 'z' && !e.shiftKey) {
+        if (e.key === "z" && !e.shiftKey) {
           e.preventDefault();
           undo();
-        } else if ((e.key === 'z' && e.shiftKey) || e.key === 'y') {
+        } else if ((e.key === "z" && e.shiftKey) || e.key === "y") {
           e.preventDefault();
           redo();
         }
-      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      } else if (e.key === "Delete" || e.key === "Backspace") {
         if (selectedField && isEditing) {
           e.preventDefault();
           saveStateForUndo();
@@ -730,66 +774,83 @@ export default function AdvancedBillGeneratorPage() {
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [undo, redo, selectedField, isEditing, saveStateForUndo]);
 
   // CRUD helpers
-  const updateField = (id: string, patch: Partial<TemplateField>, saveUndo: boolean = true) => {
+  const updateField = (
+    id: string,
+    patch: Partial<TemplateField>,
+    saveUndo: boolean = true
+  ) => {
     if (saveUndo) {
       saveStateForUndo();
     }
-    
+
     setTemplates((prev) =>
       prev.map((t) =>
         t.id !== (currentTemplate?.id || t.id)
           ? t
           : {
               ...t,
-              fields: t.fields.map((f) => (f.id === id ? { ...f, ...patch } : f)),
+              fields: t.fields.map((f) =>
+                f.id === id ? { ...f, ...patch } : f
+              ),
             }
       )
     );
     // also update local currentTemplate state reference
     setCurrentTemplate((ct) =>
       ct && ct.id === (currentTemplate?.id || ct.id)
-        ? { ...ct, fields: ct.fields.map((f) => (f.id === id ? { ...f, ...patch } : f)) }
+        ? {
+            ...ct,
+            fields: ct.fields.map((f) =>
+              f.id === id ? { ...f, ...patch } : f
+            ),
+          }
         : ct
     );
   };
 
   const deleteField = (id: string, saveUndo: boolean = false) => {
     if (!currentTemplate) return;
-    
+
     if (saveUndo) {
       saveStateForUndo();
     }
-    
+
     setTemplates((prev) =>
-      prev.map((t) => (t.id === currentTemplate.id ? { ...t, fields: t.fields.filter((f) => f.id !== id) } : t))
+      prev.map((t) =>
+        t.id === currentTemplate.id
+          ? { ...t, fields: t.fields.filter((f) => f.id !== id) }
+          : t
+      )
     );
-    setCurrentTemplate((ct) => (ct ? { ...ct, fields: ct.fields.filter((f) => f.id !== id) } : ct));
+    setCurrentTemplate((ct) =>
+      ct ? { ...ct, fields: ct.fields.filter((f) => f.id !== id) } : ct
+    );
     setSelectedField(null);
   };
 
   // Inline editing helpers
   const startInlineEdit = (field: TemplateField) => {
     if (field.type === "image" || field.type === "signature") return;
-    
+
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
+
     const rect = canvas.getBoundingClientRect();
     const scaleX = rect.width / canvas.width;
     const scaleY = rect.height / canvas.height;
-    
+
     setInlineEditField(field);
     setInlineEditValue(field.value || "");
     setInlineEditPosition({
       x: field.x * scaleX + rect.left,
       y: field.y * scaleY + rect.top,
       width: field.width * scaleX,
-      height: field.height * scaleY
+      height: field.height * scaleY,
     });
   };
 
@@ -837,7 +898,9 @@ export default function AdvancedBillGeneratorPage() {
     // Draw fields
     for (const field of currentTemplate.fields) {
       // Box background
-      if (!((field.type === "image" || field.type === "signature") && field.value)) {
+      if (
+        !((field.type === "image" || field.type === "signature") && field.value)
+      ) {
         ctx.fillStyle = field.backgroundColor || "#ffffff";
         ctx.fillRect(field.x, field.y, field.width, field.height);
         ctx.strokeStyle = field.borderColor || "#e5e7eb";
@@ -873,23 +936,26 @@ export default function AdvancedBillGeneratorPage() {
       } else {
         // Text-like fields
         ctx.fillStyle = field.textColor || "#111827";
-        ctx.font = `${field.isItalic ? "italic " : ""}${field.isBold ? "bold " : ""}${field.fontSize || 16}px sans-serif`;
+        ctx.font = `${field.isItalic ? "italic " : ""}${
+          field.isBold ? "bold " : ""
+        }${field.fontSize || 16}px sans-serif`;
         let tx = field.x + 8;
         if (field.alignment === "center") tx = field.x + field.width / 2;
         if (field.alignment === "right") tx = field.x + field.width - 8;
         ctx.textAlign = field.alignment as CanvasTextAlign;
         const content = field.value || field.placeholder || field.label || "";
-        
+
         // Handle multi-line text for textarea fields
-        if (field.type === "textarea" && content.includes('\n')) {
-          const lines = content.split('\n');
+        if (field.type === "textarea" && content.includes("\n")) {
+          const lines = content.split("\n");
           const lineHeight = (field.fontSize || 16) * 1.2;
           const totalTextHeight = lines.length * lineHeight;
-          let startY = field.y + (field.height - totalTextHeight) / 2 + lineHeight / 2;
-          
+          let startY =
+            field.y + (field.height - totalTextHeight) / 2 + lineHeight / 2;
+
           ctx.textBaseline = "middle";
           lines.forEach((line, index) => {
-            const y = startY + (index * lineHeight);
+            const y = startY + index * lineHeight;
             if (y >= field.y && y <= field.y + field.height) {
               ctx.fillText(line, tx, y, field.width - 16);
             }
@@ -897,7 +963,12 @@ export default function AdvancedBillGeneratorPage() {
         } else {
           // Single line text
           ctx.textBaseline = "middle";
-          ctx.fillText(content, tx, field.y + field.height / 2, field.width - 16);
+          ctx.fillText(
+            content,
+            tx,
+            field.y + field.height / 2,
+            field.width - 16
+          );
         }
       }
 
@@ -905,13 +976,15 @@ export default function AdvancedBillGeneratorPage() {
       if (field.subElements && field.subElements.length > 0) {
         field.subElements.forEach((subEl) => {
           ctx.fillStyle = subEl.textColor;
-          ctx.font = `${subEl.isItalic ? "italic " : ""}${subEl.isBold ? "bold " : ""}${subEl.fontSize}px sans-serif`;
+          ctx.font = `${subEl.isItalic ? "italic " : ""}${
+            subEl.isBold ? "bold " : ""
+          }${subEl.fontSize}px sans-serif`;
           ctx.textBaseline = "top";
           ctx.textAlign = "center";
-          
+
           let subX = field.x + field.width / 2 + subEl.offsetX;
           let subY = field.y + subEl.offsetY;
-          
+
           switch (subEl.position) {
             case "top":
               subY = field.y - subEl.fontSize - 5 + subEl.offsetY;
@@ -932,7 +1005,7 @@ export default function AdvancedBillGeneratorPage() {
               ctx.textBaseline = "middle";
               break;
           }
-          
+
           ctx.fillText(subEl.content, subX, subY);
         });
       }
@@ -942,9 +1015,12 @@ export default function AdvancedBillGeneratorPage() {
         ctx.strokeStyle = "#007bff";
         ctx.lineWidth = 2;
         ctx.setLineDash([5, 5]);
-        
+
         // For image/signature fields, draw selection around actual image content
-        if ((field.type === "image" || field.type === "signature") && field.value) {
+        if (
+          (field.type === "image" || field.type === "signature") &&
+          field.value
+        ) {
           const cacheKey = `${field.id}`;
           const cached = imageCacheRef.current[cacheKey];
           if (cached) {
@@ -958,12 +1034,22 @@ export default function AdvancedBillGeneratorPage() {
             ctx.strokeRect(dx - 2, dy - 2, dw + 4, dh + 4);
           } else {
             // If image not loaded yet, use full field area
-            ctx.strokeRect(field.x - 2, field.y - 2, field.width + 4, field.height + 4);
+            ctx.strokeRect(
+              field.x - 2,
+              field.y - 2,
+              field.width + 4,
+              field.height + 4
+            );
           }
         } else {
-          ctx.strokeRect(field.x - 2, field.y - 2, field.width + 4, field.height + 4);
+          ctx.strokeRect(
+            field.x - 2,
+            field.y - 2,
+            field.width + 4,
+            field.height + 4
+          );
         }
-        
+
         ctx.setLineDash([]);
         drawResizeHandles(ctx, field);
       }
@@ -1000,19 +1086,19 @@ export default function AdvancedBillGeneratorPage() {
   const getMousePos = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
-    
+
     // Calculate scale factors in case of any CSS scaling
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
-    
+
     // Get mouse position relative to canvas
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
-    
+
     // Ensure coordinates are within canvas bounds
     return {
       x: Math.max(0, Math.min(x, canvas.width)),
-      y: Math.max(0, Math.min(y, canvas.height))
+      y: Math.max(0, Math.min(y, canvas.height)),
     };
   };
 
@@ -1020,7 +1106,7 @@ export default function AdvancedBillGeneratorPage() {
     if (!currentTemplate) return null;
     for (let i = currentTemplate.fields.length - 1; i >= 0; i--) {
       const f = currentTemplate.fields[i];
-      
+
       // For image/signature fields with content, only hit test the actual image area
       if ((f.type === "image" || f.type === "signature") && f.value) {
         const cacheKey = `${f.id}`;
@@ -1033,31 +1119,46 @@ export default function AdvancedBillGeneratorPage() {
           const dh = Math.max(1, Math.floor(ih * scale));
           const dx = f.x + (f.width - dw) / 2;
           const dy = f.y + (f.height - dh) / 2;
-          
+
           if (px >= dx && px <= dx + dw && py >= dy && py <= dy + dh) return f;
         } else {
           // If image not loaded yet, use full field area
-          if (px >= f.x && px <= f.x + f.width && py >= f.y && py <= f.y + f.height) return f;
+          if (
+            px >= f.x &&
+            px <= f.x + f.width &&
+            py >= f.y &&
+            py <= f.y + f.height
+          )
+            return f;
         }
       } else {
         // For non-image fields, use full field area
-        if (px >= f.x && px <= f.x + f.width && py >= f.y && py <= f.y + f.height) return f;
+        if (
+          px >= f.x &&
+          px <= f.x + f.width &&
+          py >= f.y &&
+          py <= f.y + f.height
+        )
+          return f;
       }
     }
     return null;
   }
 
-  function drawResizeHandles(ctx: CanvasRenderingContext2D, field: TemplateField) {
+  function drawResizeHandles(
+    ctx: CanvasRenderingContext2D,
+    field: TemplateField
+  ) {
     const size = 6;
     ctx.fillStyle = "#2563eb";
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 1;
-    
+
     let handleX = field.x;
     let handleY = field.y;
     let handleWidth = field.width;
     let handleHeight = field.height;
-    
+
     // For image/signature fields with content, position handles around actual image
     if ((field.type === "image" || field.type === "signature") && field.value) {
       const cacheKey = `${field.id}`;
@@ -1074,7 +1175,7 @@ export default function AdvancedBillGeneratorPage() {
         handleHeight = dh;
       }
     }
-    
+
     const centers = [
       { x: handleX, y: handleY, key: "nw" },
       { x: handleX + handleWidth / 2, y: handleY, key: "n" },
@@ -1089,7 +1190,7 @@ export default function AdvancedBillGeneratorPage() {
       ctx.fillRect(c.x - size / 2, c.y - size / 2, size, size);
       ctx.strokeRect(c.x - size / 2, c.y - size / 2, size, size);
     });
-  };
+  }
 
   const getHandleAtPosition = (
     px: number,
@@ -1097,12 +1198,12 @@ export default function AdvancedBillGeneratorPage() {
     field: TemplateField
   ): ResizeHandle => {
     const size = 6;
-    
+
     let handleX = field.x;
     let handleY = field.y;
     let handleWidth = field.width;
     let handleHeight = field.height;
-    
+
     // For image/signature fields with content, use actual image dimensions for handle hit testing
     if ((field.type === "image" || field.type === "signature") && field.value) {
       const cacheKey = `${field.id}`;
@@ -1119,8 +1220,12 @@ export default function AdvancedBillGeneratorPage() {
         handleHeight = dh;
       }
     }
-    
-    const handles: { key: Exclude<ResizeHandle, null>; x: number; y: number }[] = [
+
+    const handles: {
+      key: Exclude<ResizeHandle, null>;
+      x: number;
+      y: number;
+    }[] = [
       { key: "nw", x: handleX, y: handleY },
       { key: "n", x: handleX + handleWidth / 2, y: handleY },
       { key: "ne", x: handleX + handleWidth, y: handleY },
@@ -1131,7 +1236,8 @@ export default function AdvancedBillGeneratorPage() {
       { key: "se", x: handleX + handleWidth, y: handleY + handleHeight },
     ];
     for (const h of handles) {
-      if (Math.abs(px - h.x) <= size && Math.abs(py - h.y) <= size) return h.key;
+      if (Math.abs(px - h.x) <= size && Math.abs(py - h.y) <= size)
+        return h.key;
     }
     return null;
   };
@@ -1139,16 +1245,16 @@ export default function AdvancedBillGeneratorPage() {
   // Mouse handlers
   const handleMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isEditing || !currentTemplate) return;
-    
+
     // Cancel inline editing if clicking elsewhere
     if (inlineEditField) {
       finishInlineEdit();
       return;
     }
-    
+
     const { x, y } = getMousePos(event);
     const field = hitTest(x, y);
-    
+
     if (field) {
       setSelectedField(field);
       const handle = getHandleAtPosition(x, y, field);
@@ -1178,14 +1284,27 @@ export default function AdvancedBillGeneratorPage() {
       const ny = curY - dragOffset.y;
       const canvasWidth = currentTemplate.width;
       const canvasHeight = currentTemplate.height;
-      
+
       // Allow moving to canvas edges (0,0) and constrain within canvas bounds
-      const constrainedX = Math.max(0, Math.min(nx, canvasWidth - selectedField.width));
-      const constrainedY = Math.max(0, Math.min(ny, canvasHeight - selectedField.height));
-      
+      const constrainedX = Math.max(
+        0,
+        Math.min(nx, canvasWidth - selectedField.width)
+      );
+      const constrainedY = Math.max(
+        0,
+        Math.min(ny, canvasHeight - selectedField.height)
+      );
+
       // Only update if position actually changed
-      if (selectedField.x !== constrainedX || selectedField.y !== constrainedY) {
-        updateField(selectedField.id, { x: constrainedX, y: constrainedY }, false);
+      if (
+        selectedField.x !== constrainedX ||
+        selectedField.y !== constrainedY
+      ) {
+        updateField(
+          selectedField.id,
+          { x: constrainedX, y: constrainedY },
+          false
+        );
       }
       return;
     }
@@ -1201,13 +1320,17 @@ export default function AdvancedBillGeneratorPage() {
       let newH = orig.height;
 
       const minSize = 20;
-      const lockAspect = !!orig.lockAspect && (orig.type === "image" || orig.type === "signature");
+      const lockAspect =
+        !!orig.lockAspect &&
+        (orig.type === "image" || orig.type === "signature");
       const aspect = orig.width / Math.max(1, orig.height);
 
       const applyAspect = () => {
         if (!lockAspect) return;
-        if (resizeHandle === "n" || resizeHandle === "s") newW = Math.max(minSize, newH * aspect);
-        else if (resizeHandle === "e" || resizeHandle === "w") newH = Math.max(minSize, newW / aspect);
+        if (resizeHandle === "n" || resizeHandle === "s")
+          newW = Math.max(minSize, newH * aspect);
+        else if (resizeHandle === "e" || resizeHandle === "w")
+          newH = Math.max(minSize, newW / aspect);
         else newH = Math.max(minSize, newW / aspect);
       };
 
@@ -1274,19 +1397,35 @@ export default function AdvancedBillGeneratorPage() {
       // Apply canvas boundary constraints for resize operations
       const canvasWidth = currentTemplate.width;
       const canvasHeight = currentTemplate.height;
-      
+
       // Ensure field stays within canvas bounds
-      const constrainedX = Math.max(0, Math.min(newX, canvasWidth - Math.max(minSize, newW)));
-      const constrainedY = Math.max(0, Math.min(newY, canvasHeight - Math.max(minSize, newH)));
-      const constrainedW = Math.min(Math.max(minSize, newW), canvasWidth - constrainedX);
-      const constrainedH = Math.min(Math.max(minSize, newH), canvasHeight - constrainedY);
-      
-      updateField(resizeOriginRef.current.field.id, {
-        x: constrainedX,
-        y: constrainedY,
-        width: constrainedW,
-        height: constrainedH 
-      }, false);
+      const constrainedX = Math.max(
+        0,
+        Math.min(newX, canvasWidth - Math.max(minSize, newW))
+      );
+      const constrainedY = Math.max(
+        0,
+        Math.min(newY, canvasHeight - Math.max(minSize, newH))
+      );
+      const constrainedW = Math.min(
+        Math.max(minSize, newW),
+        canvasWidth - constrainedX
+      );
+      const constrainedH = Math.min(
+        Math.max(minSize, newH),
+        canvasHeight - constrainedY
+      );
+
+      updateField(
+        resizeOriginRef.current.field.id,
+        {
+          x: constrainedX,
+          y: constrainedY,
+          width: constrainedW,
+          height: constrainedH,
+        },
+        false
+      );
       return;
     }
   };
@@ -1299,7 +1438,11 @@ export default function AdvancedBillGeneratorPage() {
 
   // Handle keyboard events for inline editing
   const handleInlineKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey && inlineEditField?.type !== "textarea") {
+    if (
+      e.key === "Enter" &&
+      !e.shiftKey &&
+      inlineEditField?.type !== "textarea"
+    ) {
       e.preventDefault();
       finishInlineEdit();
     } else if (e.key === "Escape") {
@@ -1311,22 +1454,22 @@ export default function AdvancedBillGeneratorPage() {
   // Handle double-click for inline editing
   const handleDoubleClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isEditing || !currentTemplate) return;
-    
+
     const { x, y } = getMousePos(event);
     const field = hitTest(x, y);
-    
+
     if (field && field.type !== "image" && field.type !== "signature") {
       // Cancel any pending drag/resize operations
       setIsDragging(false);
       setIsResizing(false);
       setResizeHandle(null);
-      
+
       // Clear the timer to prevent delayed drag behavior
       if (doubleClickTimerRef.current) {
         clearTimeout(doubleClickTimerRef.current);
         doubleClickTimerRef.current = null;
       }
-      
+
       startInlineEdit(field);
     }
   };
@@ -1340,11 +1483,10 @@ export default function AdvancedBillGeneratorPage() {
     setSelectedField(f);
   };
 
-
   // Create from our professional sample (duplicate first professional or fallback to defaults)
   const createFromProfessional = () => {
     // Try to find a professional template to duplicate
-    const base = templates.find(t => /professional/i.test(t.name)) || null;
+    const base = templates.find((t) => /professional/i.test(t.name)) || null;
     const idx = templates.length + 1;
     const newTemplate: Template = base
       ? {
@@ -1352,7 +1494,12 @@ export default function AdvancedBillGeneratorPage() {
           id: `tpl-${Date.now()}`,
           name: `${base.name} (${idx})`,
           createdAt: new Date(),
-          fields: base.fields.map(f => ({ ...f, id: `${f.id}-${Date.now()}-${Math.random().toString(36).slice(2,8)}` }))
+          fields: base.fields.map((f) => ({
+            ...f,
+            id: `${f.id}-${Date.now()}-${Math.random()
+              .toString(36)
+              .slice(2, 8)}`,
+          })),
         }
       : {
           id: `tpl-${idx}`,
@@ -1361,9 +1508,9 @@ export default function AdvancedBillGeneratorPage() {
           width: 800,
           height: 1120,
           createdAt: new Date(),
-          fields: []
+          fields: [],
         };
-    setTemplates(prev => [newTemplate, ...prev]);
+    setTemplates((prev) => [newTemplate, ...prev]);
     setCurrentTemplate(newTemplate);
     setShowNewTemplateChooser(false);
     setIsEditing(true);
@@ -1410,7 +1557,7 @@ export default function AdvancedBillGeneratorPage() {
         borderRadius: 6,
         alignment: "left",
         required: true,
-        subElements: []
+        subElements: [],
       },
       {
         id: `fld-date-${Date.now() + 1}`,
@@ -1431,7 +1578,7 @@ export default function AdvancedBillGeneratorPage() {
         borderRadius: 6,
         alignment: "left",
         required: true,
-        subElements: []
+        subElements: [],
       },
       {
         id: `fld-amount-${Date.now() + 2}`,
@@ -1452,7 +1599,7 @@ export default function AdvancedBillGeneratorPage() {
         borderRadius: 8,
         alignment: "center",
         required: true,
-        subElements: []
+        subElements: [],
       },
       {
         id: `fld-description-${Date.now() + 3}`,
@@ -1473,7 +1620,7 @@ export default function AdvancedBillGeneratorPage() {
         borderRadius: 6,
         alignment: "left",
         required: false,
-        subElements: []
+        subElements: [],
       },
       {
         id: `fld-signature-${Date.now() + 4}`,
@@ -1506,12 +1653,12 @@ export default function AdvancedBillGeneratorPage() {
             fontSize: 12,
             textColor: "#6b7280",
             isBold: false,
-            isItalic: true
-          }
-        ]
-      }
+            isItalic: true,
+          },
+        ],
+      },
     ];
-    
+
     const t: Template = {
       id: `tpl-${idx}`,
       name: `Template ${idx}`,
@@ -1524,8 +1671,23 @@ export default function AdvancedBillGeneratorPage() {
     setTemplates((prev) => [t, ...prev]);
     setCurrentTemplate(t);
   };
-
-  const openFieldEditor = (field?: TemplateField, mode: "create" | "edit" = "create") => {
+  // Load stored templates on mount (client-only) to avoid SSR hydration mismatches
+  useEffect(() => {
+    try {
+      const stored = readArrayKey<any>(TEMPLATES_KEY);
+      if (stored && stored.length) {
+        const deserialized: Template[] = stored.map((t: any) => ({
+          ...t,
+          createdAt: t.createdAt ? new Date(t.createdAt) : new Date(),
+        }));
+        setTemplates(deserialized);
+      }
+    } catch {}
+  }, []);
+  const openFieldEditor = (
+    field?: TemplateField,
+    mode: "create" | "edit" = "create"
+  ) => {
     setIsFieldEditorMode(mode);
     if (mode === "edit" && field) setFieldEditorData({ ...field });
     else
@@ -1558,8 +1720,16 @@ export default function AdvancedBillGeneratorPage() {
     if (!currentTemplate || !fieldEditorData.id) return;
     const field = fieldEditorData as TemplateField;
     if (isFieldEditorMode === "create") {
-      setTemplates((prev) => prev.map((t) => (t.id === currentTemplate.id ? { ...t, fields: [...t.fields, field] } : t)));
-      setCurrentTemplate((ct) => (ct ? { ...ct, fields: [...ct.fields, field] } : ct));
+      setTemplates((prev) =>
+        prev.map((t) =>
+          t.id === currentTemplate.id
+            ? { ...t, fields: [...t.fields, field] }
+            : t
+        )
+      );
+      setCurrentTemplate((ct) =>
+        ct ? { ...ct, fields: [...ct.fields, field] } : ct
+      );
     } else {
       updateField(field.id, field);
     }
@@ -1578,12 +1748,24 @@ export default function AdvancedBillGeneratorPage() {
     const imgData = canvas.toDataURL("image/png");
     // Use points; map canvas px to pt 1:1 for simplicity
     const pdf = new jsPDF({
-      orientation: currentTemplate.width > currentTemplate.height ? "landscape" : "portrait",
+      orientation:
+        currentTemplate.width > currentTemplate.height
+          ? "landscape"
+          : "portrait",
       unit: "pt",
       format: [currentTemplate.width, currentTemplate.height],
       compress: true,
     });
-    pdf.addImage(imgData, "PNG", 0, 0, currentTemplate.width, currentTemplate.height, undefined, "FAST");
+    pdf.addImage(
+      imgData,
+      "PNG",
+      0,
+      0,
+      currentTemplate.width,
+      currentTemplate.height,
+      undefined,
+      "FAST"
+    );
     pdf.save(`${currentTemplate.name || "template"}.pdf`);
   };
 
@@ -1591,17 +1773,17 @@ export default function AdvancedBillGeneratorPage() {
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
-      
+
       // Auto-resize field to fit image content
       const img = new Image();
       img.onload = () => {
         const maxWidth = 400; // Maximum field width
         const maxHeight = 300; // Maximum field height
         const aspectRatio = img.naturalWidth / img.naturalHeight;
-        
+
         let newWidth = img.naturalWidth;
         let newHeight = img.naturalHeight;
-        
+
         // Scale down if image is too large
         if (newWidth > maxWidth) {
           newWidth = maxWidth;
@@ -1611,12 +1793,12 @@ export default function AdvancedBillGeneratorPage() {
           newHeight = maxHeight;
           newWidth = newHeight * aspectRatio;
         }
-        
+
         // Update field with new dimensions and image
-        updateField(fieldId, { 
+        updateField(fieldId, {
           value: dataUrl,
           width: Math.round(newWidth),
-          height: Math.round(newHeight)
+          height: Math.round(newHeight),
         });
       };
       img.src = dataUrl;
@@ -1630,84 +1812,98 @@ export default function AdvancedBillGeneratorPage() {
   };
 
   // Render bill to canvas for preview and PDF export
-  const renderBillToCanvas = useCallback((canvas: HTMLCanvasElement, template: Template) => {
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+  const renderBillToCanvas = useCallback(
+    (canvas: HTMLCanvasElement, template: Template) => {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-    // Set canvas size
-    canvas.width = template.width;
-    canvas.height = template.height;
+      // Set canvas size
+      canvas.width = template.width;
+      canvas.height = template.height;
 
-    // Clear and set background
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Clear and set background
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Render all fields
-    template.fields.forEach((field) => {
-      // Skip empty fields
-      if (!field.value && !field.placeholder) return;
+      // Render all fields
+      template.fields.forEach((field) => {
+        // Skip empty fields
+        if (!field.value && !field.placeholder) return;
 
-      if (field.type === "image" || field.type === "signature") {
-        if (field.value) {
-          const img = new Image();
-          img.onload = () => {
-            const iw = img.naturalWidth || img.width;
-            const ih = img.naturalHeight || img.height;
-            const scale = Math.min(field.width / iw, field.height / ih);
-            const dw = Math.max(1, Math.floor(iw * scale));
-            const dh = Math.max(1, Math.floor(ih * scale));
-            const dx = field.x + (field.width - dw) / 2;
-            const dy = field.y + (field.height - dh) / 2;
-            ctx.drawImage(img, dx, dy, dw, dh);
-          };
-          img.src = field.value;
-        }
-      } else {
-        // Text fields
-        ctx.fillStyle = field.backgroundColor || "transparent";
-        if (field.backgroundColor && field.backgroundColor !== "transparent") {
-          ctx.fillRect(field.x, field.y, field.width, field.height);
-        }
-
-        // Border
-        if (field.borderWidth && field.borderWidth > 0) {
-          ctx.strokeStyle = field.borderColor || "#e5e7eb";
-          ctx.lineWidth = field.borderWidth;
-          ctx.strokeRect(field.x, field.y, field.width, field.height);
-        }
-
-        // Text
-        ctx.fillStyle = field.textColor || "#111827";
-        ctx.font = `${field.isItalic ? "italic " : ""}${field.isBold ? "bold " : ""}${field.fontSize || 16}px sans-serif`;
-        ctx.textAlign = field.alignment as CanvasTextAlign;
-        
-        let tx = field.x + 8;
-        if (field.alignment === "center") tx = field.x + field.width / 2;
-        if (field.alignment === "right") tx = field.x + field.width - 8;
-
-        const content = field.value || field.placeholder || "";
-        
-        // Handle multi-line text
-        if (field.type === "textarea" && content.includes('\n')) {
-          const lines = content.split('\n');
-          const lineHeight = (field.fontSize || 16) * 1.2;
-          const totalTextHeight = lines.length * lineHeight;
-          let startY = field.y + (field.height - totalTextHeight) / 2 + lineHeight / 2;
-          
-          ctx.textBaseline = "middle";
-          lines.forEach((line, index) => {
-            const y = startY + (index * lineHeight);
-            if (y >= field.y && y <= field.y + field.height) {
-              ctx.fillText(line, tx, y, field.width - 16);
-            }
-          });
+        if (field.type === "image" || field.type === "signature") {
+          if (field.value) {
+            const img = new Image();
+            img.onload = () => {
+              const iw = img.naturalWidth || img.width;
+              const ih = img.naturalHeight || img.height;
+              const scale = Math.min(field.width / iw, field.height / ih);
+              const dw = Math.max(1, Math.floor(iw * scale));
+              const dh = Math.max(1, Math.floor(ih * scale));
+              const dx = field.x + (field.width - dw) / 2;
+              const dy = field.y + (field.height - dh) / 2;
+              ctx.drawImage(img, dx, dy, dw, dh);
+            };
+            img.src = field.value;
+          }
         } else {
-          ctx.textBaseline = "middle";
-          ctx.fillText(content, tx, field.y + field.height / 2, field.width - 16);
+          // Text fields
+          ctx.fillStyle = field.backgroundColor || "transparent";
+          if (
+            field.backgroundColor &&
+            field.backgroundColor !== "transparent"
+          ) {
+            ctx.fillRect(field.x, field.y, field.width, field.height);
+          }
+
+          // Border
+          if (field.borderWidth && field.borderWidth > 0) {
+            ctx.strokeStyle = field.borderColor || "#e5e7eb";
+            ctx.lineWidth = field.borderWidth;
+            ctx.strokeRect(field.x, field.y, field.width, field.height);
+          }
+
+          // Text
+          ctx.fillStyle = field.textColor || "#111827";
+          ctx.font = `${field.isItalic ? "italic " : ""}${
+            field.isBold ? "bold " : ""
+          }${field.fontSize || 16}px sans-serif`;
+          ctx.textAlign = field.alignment as CanvasTextAlign;
+
+          let tx = field.x + 8;
+          if (field.alignment === "center") tx = field.x + field.width / 2;
+          if (field.alignment === "right") tx = field.x + field.width - 8;
+
+          const content = field.value || field.placeholder || "";
+
+          // Handle multi-line text
+          if (field.type === "textarea" && content.includes("\n")) {
+            const lines = content.split("\n");
+            const lineHeight = (field.fontSize || 16) * 1.2;
+            const totalTextHeight = lines.length * lineHeight;
+            let startY =
+              field.y + (field.height - totalTextHeight) / 2 + lineHeight / 2;
+
+            ctx.textBaseline = "middle";
+            lines.forEach((line, index) => {
+              const y = startY + index * lineHeight;
+              if (y >= field.y && y <= field.y + field.height) {
+                ctx.fillText(line, tx, y, field.width - 16);
+              }
+            });
+          } else {
+            ctx.textBaseline = "middle";
+            ctx.fillText(
+              content,
+              tx,
+              field.y + field.height / 2,
+              field.width - 16
+            );
+          }
         }
-      }
-    });
-  }, []);
+      });
+    },
+    []
+  );
 
   // Export to PDF
   const exportToPDF = async () => {
@@ -1715,52 +1911,53 @@ export default function AdvancedBillGeneratorPage() {
 
     try {
       // Dynamic import of jsPDF
-      const { jsPDF } = await import('jspdf');
-      
+      const { jsPDF } = await import("jspdf");
+
       // Re-render to ensure latest state
       renderBillToCanvas(billCanvasRef.current, previewTemplate);
-      
+
       // Wait for images to load
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       // Get canvas and convert to image
       const canvas = billCanvasRef.current;
-      const imgData = canvas.toDataURL('image/png', 1.0);
-      
+      const imgData = canvas.toDataURL("image/png", 1.0);
+
       // Calculate PDF dimensions (A4 size)
       const pdfWidth = 210; // A4 width in mm
       const pdfHeight = 297; // A4 height in mm
       const canvasAspectRatio = canvas.width / canvas.height;
-      
+
       let imgWidth = pdfWidth - 20; // 10mm margin on each side
       let imgHeight = imgWidth / canvasAspectRatio;
-      
+
       // If image is too tall, scale it down
       if (imgHeight > pdfHeight - 20) {
         imgHeight = pdfHeight - 20;
         imgWidth = imgHeight * canvasAspectRatio;
       }
-      
+
       // Create PDF
       const pdf = new jsPDF({
-        orientation: imgWidth > imgHeight ? 'landscape' : 'portrait',
-        unit: 'mm',
-        format: 'a4'
+        orientation: imgWidth > imgHeight ? "landscape" : "portrait",
+        unit: "mm",
+        format: "a4",
       });
-      
+
       // Center the image
       const x = (pdfWidth - imgWidth) / 2;
       const y = (pdfHeight - imgHeight) / 2;
-      
-      pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
-      
+
+      pdf.addImage(imgData, "PNG", x, y, imgWidth, imgHeight);
+
       // Save the PDF
-      const fileName = `${previewTemplate.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_bill.pdf`;
+      const fileName = `${previewTemplate.name
+        .replace(/[^a-z0-9]/gi, "_")
+        .toLowerCase()}_bill.pdf`;
       pdf.save(fileName);
-      
     } catch (error) {
-      console.error('PDF export failed:', error);
-      alert('PDF export failed. Please try again.');
+      console.error("PDF export failed:", error);
+      alert("PDF export failed. Please try again.");
     }
   };
 
@@ -1771,23 +1968,24 @@ export default function AdvancedBillGeneratorPage() {
     try {
       // Generate RTF content that opens properly in Word
       const rtfContent = generateRTFContent(previewTemplate);
-      
+
       // Create blob with RTF content
-      const blob = new Blob([rtfContent], { 
-        type: 'application/rtf' 
+      const blob = new Blob([rtfContent], {
+        type: "application/rtf",
       });
-      
-      const link = document.createElement('a');
+
+      const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = `${previewTemplate.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_bill.rtf`;
+      link.download = `${previewTemplate.name
+        .replace(/[^a-z0-9]/gi, "_")
+        .toLowerCase()}_bill.rtf`;
       link.click();
-      
+
       // Clean up
       URL.revokeObjectURL(link.href);
-      
     } catch (error) {
-      console.error('Word export failed:', error);
-      alert('Word export failed. Please try again.');
+      console.error("Word export failed:", error);
+      alert("Word export failed. Please try again.");
     }
   };
 
@@ -1796,25 +1994,32 @@ export default function AdvancedBillGeneratorPage() {
     // RTF header with font table
     const rtfHeader = `{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}{\\f1 Arial;}}\n`;
     const rtfFooter = `}`;
-    
+
     // Document title and header
     let rtfBody = `\\f1\\fs28\\qc\\b ${template.name}\\b0\\par\n`;
     rtfBody += `\\fs20\\qc Generated on ${new Date().toLocaleDateString()}\\par\n\\par\n\\par\n`;
-    
+
     // Add each field with proper formatting
-    template.fields.forEach(field => {
-      const fieldValue = field.value || field.placeholder || '[Empty]';
+    template.fields.forEach((field) => {
+      const fieldValue = field.value || field.placeholder || "[Empty]";
       // Escape RTF special characters
-      const escapedLabel = field.label.replace(/\\/g, '\\\\').replace(/{/g, '\\{').replace(/}/g, '\\}');
-      const escapedValue = fieldValue.replace(/\\/g, '\\\\').replace(/{/g, '\\{').replace(/}/g, '\\}').replace(/\n/g, '\\par\n');
-      
+      const escapedLabel = field.label
+        .replace(/\\/g, "\\\\")
+        .replace(/{/g, "\\{")
+        .replace(/}/g, "\\}");
+      const escapedValue = fieldValue
+        .replace(/\\/g, "\\\\")
+        .replace(/{/g, "\\{")
+        .replace(/}/g, "\\}")
+        .replace(/\n/g, "\\par\n");
+
       rtfBody += `\\fs22\\b ${escapedLabel}:\\b0\\par\n`;
       rtfBody += `\\fs20 ${escapedValue}\\par\n\\par\n`;
     });
-    
+
     // Footer
     rtfBody += `\\par\n\\fs16\\qc\\i This document was generated using Advanced Bill Generator\\i0\\par\n`;
-    
+
     return rtfHeader + rtfBody + rtfFooter;
   };
 
@@ -1825,34 +2030,35 @@ export default function AdvancedBillGeneratorPage() {
     try {
       // Re-render to ensure latest state
       renderBillToCanvas(billCanvasRef.current, previewTemplate);
-      
+
       // Wait for images to load
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       // Convert canvas to image
       const canvas = billCanvasRef.current;
-      const imgData = canvas.toDataURL('image/png', 1.0);
-      
+      const imgData = canvas.toDataURL("image/png", 1.0);
+
       // Download as image
-      const link = document.createElement('a');
-      link.download = `${previewTemplate.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_bill.png`;
+      const link = document.createElement("a");
+      link.download = `${previewTemplate.name
+        .replace(/[^a-z0-9]/gi, "_")
+        .toLowerCase()}_bill.png`;
       link.href = imgData;
       link.click();
-      
     } catch (error) {
-      console.error('Image export failed:', error);
-      alert('Image export failed. Please try again.');
+      console.error("Image export failed:", error);
+      alert("Image export failed. Please try again.");
     }
   };
 
   // Print bill
   const printBill = () => {
     if (!billCanvasRef.current) return;
-    
+
     const canvas = billCanvasRef.current;
-    const imgData = canvas.toDataURL('image/png');
-    
-    const printWindow = window.open('', '_blank');
+    const imgData = canvas.toDataURL("image/png");
+
+    const printWindow = window.open("", "_blank");
     if (printWindow) {
       printWindow.document.write(`
         <html>
@@ -1878,9 +2084,10 @@ export default function AdvancedBillGeneratorPage() {
     setTemplates((prev) => prev.filter((t) => t.id !== templateId));
     setCurrentTemplate((ct) => (ct && ct.id === templateId ? null : ct));
     try {
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         const lastId = window.localStorage.getItem(LAST_TEMPLATE_KEY);
-        if (lastId === templateId) window.localStorage.removeItem(LAST_TEMPLATE_KEY);
+        if (lastId === templateId)
+          window.localStorage.removeItem(LAST_TEMPLATE_KEY);
       }
     } catch {}
   };
@@ -1890,21 +2097,34 @@ export default function AdvancedBillGeneratorPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6 md:mb-8">
-          <h1 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3 md:mb-4">🚀 Advanced Template Builder</h1>
+          <h1 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3 md:mb-4">
+            🚀 Advanced Template Builder
+          </h1>
           <p className="text-base md:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto px-2">
-            Create professional bill templates with advanced styling, positioning, and customization options!
+            Create professional bill templates with advanced styling,
+            positioning, and customization options!
           </p>
         </div>
 
         {/* Template Management */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 mb-8 border border-gray-200 dark:border-gray-700">
-          <div className="flex items-start md:items-center justify-between mb-6 flex-col md:flex-row gap-3 md:gap-0">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Your Templates</h2>
-            <div className="flex gap-2 md:gap-3 w-full md:w-auto">
-              <Button className="w-full md:w-auto" variant="secondary" onClick={() => setShowTemplateSettings(true)}>
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-start md:justify-between mb-6 gap-3 md:gap-0 flex-wrap md:flex-nowrap">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+              Your Templates
+            </h2>
+            <div className="flex flex-wrap gap-2 md:gap-3 w-full md:w-auto">
+              <Button
+                className="w-full md:w-auto"
+                variant="secondary"
+                onClick={() => setShowTemplateSettings(true)}
+              >
                 ⚙️ Template Settings
               </Button>
-              <Button className="w-full md:w-auto" variant="success" onClick={() => setShowNewTemplateChooser(true)}>
+              <Button
+                className="w-full md:w-auto"
+                variant="success"
+                onClick={() => setShowNewTemplateChooser(true)}
+              >
                 ✨ Create New Template
               </Button>
             </div>
@@ -1913,7 +2133,10 @@ export default function AdvancedBillGeneratorPage() {
           {/* Templates List */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {templates.map((template) => (
-              <Card key={template.id} className="group hover:shadow-lg transition-all duration-300 overflow-hidden">
+              <Card
+                key={template.id}
+                className="group hover:shadow-lg transition-all duration-300 overflow-hidden"
+              >
                 <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -1921,15 +2144,34 @@ export default function AdvancedBillGeneratorPage() {
                         <input
                           type="text"
                           value={editingTemplateName}
-                          onChange={(e) => setEditingTemplateName(e.target.value)}
+                          onChange={(e) =>
+                            setEditingTemplateName(e.target.value)
+                          }
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               if (editingTemplateName.trim()) {
-                                setTemplates(prev => prev.map(t => 
-                                  t.id === template.id ? { ...t, name: editingTemplateName.trim() } : t
-                                ));
-                                if (currentTemplate && currentTemplate.id === template.id) {
-                                  setCurrentTemplate(prev => prev ? { ...prev, name: editingTemplateName.trim() } : null);
+                                setTemplates((prev) =>
+                                  prev.map((t) =>
+                                    t.id === template.id
+                                      ? {
+                                          ...t,
+                                          name: editingTemplateName.trim(),
+                                        }
+                                      : t
+                                  )
+                                );
+                                if (
+                                  currentTemplate &&
+                                  currentTemplate.id === template.id
+                                ) {
+                                  setCurrentTemplate((prev) =>
+                                    prev
+                                      ? {
+                                          ...prev,
+                                          name: editingTemplateName.trim(),
+                                        }
+                                      : null
+                                  );
                                 }
                               }
                               setEditingTemplateId(null);
@@ -1943,7 +2185,9 @@ export default function AdvancedBillGeneratorPage() {
                           autoFocus
                         />
                       ) : (
-                        <CardTitle className="mb-2 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">{template.name}</CardTitle>
+                        <CardTitle className="mb-2 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
+                          {template.name}
+                        </CardTitle>
                       )}
                       <CardDescription>{template.description}</CardDescription>
                     </div>
@@ -1956,8 +2200,18 @@ export default function AdvancedBillGeneratorPage() {
                         setEditingTemplateName(template.name);
                       }}
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        />
                       </svg>
                     </Button>
                   </div>
@@ -1966,23 +2220,53 @@ export default function AdvancedBillGeneratorPage() {
                   <div className="flex items-center gap-6 mb-6 text-sm text-gray-500 dark:text-gray-400">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <span className="font-medium">{template.fields.length} fields</span>
+                      <span className="font-medium">
+                        {template.fields.length} fields
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span>Created {template.createdAt.toLocaleDateString()}</span>
+                      <span>
+                        Created{" "}
+                        {new Date(template.createdAt)
+                          .toISOString()
+                          .slice(0, 10)}
+                      </span>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <Button onClick={() => setCurrentTemplate(template)}>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        />
                       </svg>
                       Edit
                     </Button>
-                    <Button variant="gradient" onClick={() => generateBill(template)}>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <Button
+                      variant="gradient"
+                      onClick={() => generateBill(template)}
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
                       </svg>
                       Generate
                     </Button>
@@ -1998,14 +2282,37 @@ export default function AdvancedBillGeneratorPage() {
                         setTemplates((prev) => [...prev, templateCopy]);
                       }}
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        />
                       </svg>
                       Duplicate
                     </Button>
-                    <Button variant="destructive" onClick={() => deleteTemplate(template.id)}>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    <Button
+                      variant="destructive"
+                      onClick={() => deleteTemplate(template.id)}
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
                       </svg>
                       Delete
                     </Button>
@@ -2016,7 +2323,10 @@ export default function AdvancedBillGeneratorPage() {
           </div>
 
           {templates.length === 0 && (
-            <div className="text-center py-8 text-gray-500">No templates yet. Create your first advanced template to get started!</div>
+            <div className="text-center py-8 text-gray-500">
+              No templates yet. Create your first advanced template to get
+              started!
+            </div>
           )}
         </div>
 
@@ -2025,19 +2335,44 @@ export default function AdvancedBillGeneratorPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-8 border border-gray-200 dark:border-gray-700">
             <div className="flex items-start md:items-center justify-between mb-4 md:mb-6 flex-col md:flex-row gap-3 md:gap-0">
               <div>
-                <h3 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">{currentTemplate.name}</h3>
-                <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">{currentTemplate.fields.length} fields • Advanced styling enabled</p>
+                <h3 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">
+                  {currentTemplate.name}
+                </h3>
+                <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
+                  {currentTemplate.fields.length} fields • Advanced styling
+                  enabled
+                </p>
               </div>
               <div className="flex flex-wrap gap-2 md:gap-3 w-full md:w-auto">
                 {!isEditing ? (
-                  <Button className="w-full md:w-auto" onClick={() => setIsEditing(true)}>✏️ Edit Template</Button>
+                  <Button
+                    className="w-full md:w-auto"
+                    onClick={() => setIsEditing(true)}
+                  >
+                    ✏️ Edit Template
+                  </Button>
                 ) : (
                   <>
-                    <Button className="w-full sm:w-auto" onClick={() => openFieldEditor(undefined, "create")}>
+                    <Button
+                      className="w-full sm:w-auto"
+                      onClick={() => openFieldEditor(undefined, "create")}
+                    >
                       ➕ Add Field
                     </Button>
-                    <Button className="w-full sm:w-auto" variant="gradient" onClick={exportCurrentCanvasToPdf}>🖨️ Export PDF</Button>
-                    <Button className="w-full sm:w-auto" variant="success" onClick={saveTemplate}>💾 Save Template</Button>
+                    <Button
+                      className="w-full sm:w-auto"
+                      variant="gradient"
+                      onClick={exportCurrentCanvasToPdf}
+                    >
+                      🖨️ Export PDF
+                    </Button>
+                    <Button
+                      className="w-full sm:w-auto"
+                      variant="success"
+                      onClick={saveTemplate}
+                    >
+                      💾 Save Template
+                    </Button>
                   </>
                 )}
               </div>
@@ -2045,13 +2380,13 @@ export default function AdvancedBillGeneratorPage() {
 
             {/* Template Canvas */}
             <div className="flex justify-center mb-4 md:mb-6 overflow-auto">
-              <div 
+              <div
                 className="relative bg-white border border-gray-200 rounded-md shadow-sm"
                 style={{
                   width: currentTemplate.width,
                   height: currentTemplate.height,
                   minWidth: currentTemplate.width,
-                  minHeight: currentTemplate.height
+                  minHeight: currentTemplate.height,
                 }}
               >
                 <canvas
@@ -2064,9 +2399,9 @@ export default function AdvancedBillGeneratorPage() {
                   onMouseUp={handleMouseUp}
                   onClick={handleCanvasClick}
                   onDoubleClick={handleDoubleClick}
-                  style={{ 
+                  style={{
                     cursor: isEditing ? "move" : "default",
-                    touchAction: 'none'
+                    touchAction: "none",
                   }}
                 />
 
@@ -2083,24 +2418,36 @@ export default function AdvancedBillGeneratorPage() {
                   >
                     {inlineEditField.type === "textarea" ? (
                       <textarea
-                        ref={inlineInputRef as React.RefObject<HTMLTextAreaElement>}
+                        ref={
+                          inlineInputRef as React.RefObject<HTMLTextAreaElement>
+                        }
                         value={inlineEditValue}
                         onChange={(e) => setInlineEditValue(e.target.value)}
                         onKeyDown={handleInlineKeyDown}
                         onBlur={finishInlineEdit}
                         className="w-full h-full p-2 text-sm border-2 border-blue-500 rounded resize-none"
                         style={{
-                          fontSize: `${(inlineEditField.fontSize || 16) * (inlineEditPosition.width / inlineEditField.width)}px`,
-                          fontWeight: inlineEditField.isBold ? 'bold' : 'normal',
-                          fontStyle: inlineEditField.isItalic ? 'italic' : 'normal',
+                          fontSize: `${
+                            (inlineEditField.fontSize || 16) *
+                            (inlineEditPosition.width / inlineEditField.width)
+                          }px`,
+                          fontWeight: inlineEditField.isBold
+                            ? "bold"
+                            : "normal",
+                          fontStyle: inlineEditField.isItalic
+                            ? "italic"
+                            : "normal",
                           textAlign: inlineEditField.alignment as any,
-                          color: inlineEditField.textColor || '#111827',
-                          backgroundColor: inlineEditField.backgroundColor || '#ffffff'
+                          color: inlineEditField.textColor || "#111827",
+                          backgroundColor:
+                            inlineEditField.backgroundColor || "#ffffff",
                         }}
                       />
                     ) : (
                       <input
-                        ref={inlineInputRef as React.RefObject<HTMLInputElement>}
+                        ref={
+                          inlineInputRef as React.RefObject<HTMLInputElement>
+                        }
                         type="text"
                         value={inlineEditValue}
                         onChange={(e) => setInlineEditValue(e.target.value)}
@@ -2108,18 +2455,25 @@ export default function AdvancedBillGeneratorPage() {
                         onBlur={finishInlineEdit}
                         className="w-full h-full p-2 text-sm border-2 border-blue-500 rounded"
                         style={{
-                          fontSize: `${(inlineEditField.fontSize || 16) * (inlineEditPosition.width / inlineEditField.width)}px`,
-                          fontWeight: inlineEditField.isBold ? 'bold' : 'normal',
-                          fontStyle: inlineEditField.isItalic ? 'italic' : 'normal',
+                          fontSize: `${
+                            (inlineEditField.fontSize || 16) *
+                            (inlineEditPosition.width / inlineEditField.width)
+                          }px`,
+                          fontWeight: inlineEditField.isBold
+                            ? "bold"
+                            : "normal",
+                          fontStyle: inlineEditField.isItalic
+                            ? "italic"
+                            : "normal",
                           textAlign: inlineEditField.alignment as any,
-                          color: inlineEditField.textColor || '#111827',
-                          backgroundColor: inlineEditField.backgroundColor || '#ffffff'
+                          color: inlineEditField.textColor || "#111827",
+                          backgroundColor:
+                            inlineEditField.backgroundColor || "#ffffff",
                         }}
                       />
                     )}
                   </div>
                 )}
-
               </div>
             </div>
 
@@ -2127,8 +2481,13 @@ export default function AdvancedBillGeneratorPage() {
             {isEditing && (
               <div className="mt-4 md:mt-6">
                 <div className="flex items-start md:items-center justify-between mb-3 md:mb-4 gap-2 md:gap-0 flex-col md:flex-row">
-                  <h4 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">Template Fields ({currentTemplate.fields.length})</h4>
-                  <Button className="w-full md:w-auto" onClick={() => openFieldEditor(undefined, "create")}>
+                  <h4 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">
+                    Template Fields ({currentTemplate.fields.length})
+                  </h4>
+                  <Button
+                    className="w-full md:w-auto"
+                    onClick={() => openFieldEditor(undefined, "create")}
+                  >
                     ➕ Add New Field
                   </Button>
                 </div>
@@ -2137,33 +2496,53 @@ export default function AdvancedBillGeneratorPage() {
                     <div
                       key={field.id}
                       className={`p-3 md:p-4 border-2 rounded-lg transition-all duration-300 ${
-                        selectedField?.id === field.id ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 dark:border-gray-700"
+                        selectedField?.id === field.id
+                          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                          : "border-gray-200 dark:border-gray-700"
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{field.label}</span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">{field.type}</span>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+                          {field.label}
+                        </span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {field.type}
+                        </span>
                       </div>
 
                       <div className="text-sm text-gray-600 dark:text-gray-400 mb-2 break-words">
-                        {field.type === "image" || field.type === "signature" ? (
-                          <span className="italic">{field.value ? "Image selected" : "No image"}</span>
+                        {field.type === "image" ||
+                        field.type === "signature" ? (
+                          <span className="italic">
+                            {field.value ? "Image selected" : "No image"}
+                          </span>
                         ) : (
                           field.value
                         )}
                       </div>
 
                       <div className="text-xs text-gray-500 dark:text-gray-400 mb-3 space-y-1">
-                        <div>Position: ({field.x}, {field.y})</div>
-                        <div>Size: {field.width} × {field.height}</div>
                         <div>
-                          Font: {field.fontSize}px {field.isBold ? "Bold" : ""} {field.isItalic ? "Italic" : ""}
+                          Position: ({field.x}, {field.y})
+                        </div>
+                        <div>
+                          Size: {field.width} × {field.height}
+                        </div>
+                        <div>
+                          Font: {field.fontSize}px {field.isBold ? "Bold" : ""}{" "}
+                          {field.isItalic ? "Italic" : ""}
                         </div>
                         <div>Align: {field.alignment}</div>
                       </div>
 
                       <div className="flex gap-2 flex-wrap">
-                        <Button className="flex-1 sm:flex-none" size="sm" onClick={() => openFieldEditor(field, "edit")}>Edit</Button>
+                        <Button
+                          className="flex-1 sm:flex-none"
+                          size="sm"
+                          onClick={() => openFieldEditor(field, "edit")}
+                        >
+                          Edit
+                        </Button>
                         <Button
                           size="sm"
                           variant="destructive"
@@ -2174,7 +2553,8 @@ export default function AdvancedBillGeneratorPage() {
                         >
                           Delete
                         </Button>
-                        {(field.type === "image" || field.type === "signature") && (
+                        {(field.type === "image" ||
+                          field.type === "signature") && (
                           <label className="bg-purple-600 hover:bg-purple-700 text-white text-xs py-1 px-2 rounded cursor-pointer transition-colors duration-300">
                             Upload Image
                             <input
@@ -2203,7 +2583,9 @@ export default function AdvancedBillGeneratorPage() {
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-0 md:p-6">
             <div className="bg-white dark:bg-gray-800 rounded-none md:rounded-xl p-4 md:p-6 w-full h-full md:h-auto md:max-w-2xl md:mx-4 overflow-y-auto">
               <div className="flex items-start justify-between mb-4">
-                <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Create New Template</h3>
+                <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+                  Create New Template
+                </h3>
                 <button
                   aria-label="Close chooser"
                   className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
@@ -2212,34 +2594,58 @@ export default function AdvancedBillGeneratorPage() {
                   ✖
                 </button>
               </div>
-              <p className="text-gray-600 dark:text-gray-300 mb-6">Choose how you want to start your template.</p>
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
+                Choose how you want to start your template.
+              </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card className="border-2 hover:border-blue-500 transition-colors">
                   <CardHeader>
                     <CardTitle>Professional Template</CardTitle>
-                    <CardDescription>Start from a polished, pre-filled invoice layout</CardDescription>
+                    <CardDescription>
+                      Start from a polished, pre-filled invoice layout
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Includes company header, client details, itemized table, and payment terms.</p>
-                    <Button className="w-full" onClick={createFromProfessional}>Use Professional</Button>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      Includes company header, client details, itemized table,
+                      and payment terms.
+                    </p>
+                    <Button className="w-full" onClick={createFromProfessional}>
+                      Use Professional
+                    </Button>
                   </CardContent>
                 </Card>
 
                 <Card className="border-2 hover:border-green-500 transition-colors">
                   <CardHeader>
                     <CardTitle>Empty Canvas</CardTitle>
-                    <CardDescription>Start from scratch with a blank page</CardDescription>
+                    <CardDescription>
+                      Start from scratch with a blank page
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Perfect if you want full control over layout and fields.</p>
-                    <Button className="w-full" variant="secondary" onClick={createEmptyTemplate}>Start Empty</Button>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      Perfect if you want full control over layout and fields.
+                    </p>
+                    <Button
+                      className="w-full"
+                      variant="secondary"
+                      onClick={createEmptyTemplate}
+                    >
+                      Start Empty
+                    </Button>
                   </CardContent>
                 </Card>
               </div>
 
               <div className="mt-6 flex justify-end">
-                <Button variant="ghost" onClick={() => setShowNewTemplateChooser(false)}>Cancel</Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowNewTemplateChooser(false)}
+                >
+                  Cancel
+                </Button>
               </div>
             </div>
           </div>
@@ -2250,28 +2656,44 @@ export default function AdvancedBillGeneratorPage() {
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-0 md:p-6">
             <div className="bg-white dark:bg-gray-800 rounded-none md:rounded-xl p-4 md:p-6 w-full h-full md:h-auto md:max-h-[90vh] md:max-w-2xl md:mx-4 overflow-y-auto">
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                {isFieldEditorMode === "create" ? "Add New Field" : "Edit Field"}
+                {isFieldEditorMode === "create"
+                  ? "Add New Field"
+                  : "Edit Field"}
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Basic Settings */}
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Field Label</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Field Label
+                    </label>
                     <input
                       type="text"
                       value={fieldEditorData.label || ""}
-                      onChange={(e) => setFieldEditorData({ ...fieldEditorData, label: e.target.value })}
+                      onChange={(e) =>
+                        setFieldEditorData({
+                          ...fieldEditorData,
+                          label: e.target.value,
+                        })
+                      }
                       className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                       placeholder="Enter field label"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Field Type</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Field Type
+                    </label>
                     <select
                       value={fieldEditorData.type || "text"}
-                      onChange={(e) => setFieldEditorData({ ...fieldEditorData, type: e.target.value as TemplateField["type"] })}
+                      onChange={(e) =>
+                        setFieldEditorData({
+                          ...fieldEditorData,
+                          type: e.target.value as TemplateField["type"],
+                        })
+                      }
                       className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                     >
                       <option value="text">Text</option>
@@ -2286,24 +2708,38 @@ export default function AdvancedBillGeneratorPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default Value</label>
-                    {fieldEditorData.type === "image" || fieldEditorData.type === "signature" ? (
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Default Value
+                    </label>
+                    {fieldEditorData.type === "image" ||
+                    fieldEditorData.type === "signature" ? (
                       <div className="space-y-3">
                         {fieldEditorData.value ? (
                           <div className="flex items-start gap-3">
-                            <img src={fieldEditorData.value} alt="preview" className="w-32 h-20 object-contain rounded border" />
+                            <img
+                              src={fieldEditorData.value}
+                              alt="preview"
+                              className="w-32 h-20 object-contain rounded border"
+                            />
                             <div className="flex flex-col gap-2">
                               <button
                                 type="button"
                                 className="bg-red-600 hover:bg-red-700 text-white text-xs py-1 px-2 rounded"
-                                onClick={() => setFieldEditorData({ ...fieldEditorData, value: "" })}
+                                onClick={() =>
+                                  setFieldEditorData({
+                                    ...fieldEditorData,
+                                    value: "",
+                                  })
+                                }
                               >
                                 Remove Image
                               </button>
                             </div>
                           </div>
                         ) : (
-                          <div className="text-xs text-gray-500 dark:text-gray-400">No image selected</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            No image selected
+                          </div>
                         )}
                         <label className="inline-block bg-purple-600 hover:bg-purple-700 text-white text-sm py-2 px-3 rounded cursor-pointer">
                           Choose Image
@@ -2315,18 +2751,29 @@ export default function AdvancedBillGeneratorPage() {
                               const file = e.target.files?.[0];
                               if (!file) return;
                               const reader = new FileReader();
-                              reader.onload = () => setFieldEditorData({ ...fieldEditorData, value: reader.result as string });
+                              reader.onload = () =>
+                                setFieldEditorData({
+                                  ...fieldEditorData,
+                                  value: reader.result as string,
+                                });
                               reader.readAsDataURL(file);
                               e.currentTarget.value = "";
                             }}
                           />
                         </label>
-                        <div className="text-[11px] text-gray-500 dark:text-gray-400">Supported: PNG, JPG, JPEG, WEBP</div>
+                        <div className="text-[11px] text-gray-500 dark:text-gray-400">
+                          Supported: PNG, JPG, JPEG, WEBP
+                        </div>
                       </div>
                     ) : fieldEditorData.type === "textarea" ? (
                       <textarea
                         value={fieldEditorData.value || ""}
-                        onChange={(e) => setFieldEditorData({ ...fieldEditorData, value: e.target.value })}
+                        onChange={(e) =>
+                          setFieldEditorData({
+                            ...fieldEditorData,
+                            value: e.target.value,
+                          })
+                        }
                         className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 min-h-[100px] resize-vertical"
                         placeholder="Enter default value (use \n for line breaks)"
                         rows={4}
@@ -2335,7 +2782,12 @@ export default function AdvancedBillGeneratorPage() {
                       <input
                         type="text"
                         value={fieldEditorData.value || ""}
-                        onChange={(e) => setFieldEditorData({ ...fieldEditorData, value: e.target.value })}
+                        onChange={(e) =>
+                          setFieldEditorData({
+                            ...fieldEditorData,
+                            value: e.target.value,
+                          })
+                        }
                         className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                         placeholder="Enter default value"
                       />
@@ -2343,10 +2795,17 @@ export default function AdvancedBillGeneratorPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Alignment</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Alignment
+                    </label>
                     <select
                       value={fieldEditorData.alignment || "left"}
-                      onChange={(e) => setFieldEditorData({ ...fieldEditorData, alignment: e.target.value as any })}
+                      onChange={(e) =>
+                        setFieldEditorData({
+                          ...fieldEditorData,
+                          alignment: e.target.value as any,
+                        })
+                      }
                       className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                     >
                       <option value="left">Left</option>
@@ -2360,20 +2819,34 @@ export default function AdvancedBillGeneratorPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">X Position</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        X Position
+                      </label>
                       <input
                         type="number"
                         value={fieldEditorData.x || 100}
-                        onChange={(e) => setFieldEditorData({ ...fieldEditorData, x: parseInt(e.target.value) })}
+                        onChange={(e) =>
+                          setFieldEditorData({
+                            ...fieldEditorData,
+                            x: parseInt(e.target.value),
+                          })
+                        }
                         className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Y Position</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Y Position
+                      </label>
                       <input
                         type="number"
                         value={fieldEditorData.y || 100}
-                        onChange={(e) => setFieldEditorData({ ...fieldEditorData, y: parseInt(e.target.value) })}
+                        onChange={(e) =>
+                          setFieldEditorData({
+                            ...fieldEditorData,
+                            y: parseInt(e.target.value),
+                          })
+                        }
                         className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                       />
                     </div>
@@ -2381,31 +2854,51 @@ export default function AdvancedBillGeneratorPage() {
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Width</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Width
+                      </label>
                       <input
                         type="number"
                         value={fieldEditorData.width || 150}
-                        onChange={(e) => setFieldEditorData({ ...fieldEditorData, width: parseInt(e.target.value) })}
+                        onChange={(e) =>
+                          setFieldEditorData({
+                            ...fieldEditorData,
+                            width: parseInt(e.target.value),
+                          })
+                        }
                         className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Height</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Height
+                      </label>
                       <input
                         type="number"
                         value={fieldEditorData.height || 40}
-                        onChange={(e) => setFieldEditorData({ ...fieldEditorData, height: parseInt(e.target.value) })}
+                        onChange={(e) =>
+                          setFieldEditorData({
+                            ...fieldEditorData,
+                            height: parseInt(e.target.value),
+                          })
+                        }
                         className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                       />
                     </div>
                   </div>
 
-                  {(fieldEditorData.type === "image" || fieldEditorData.type === "signature") && (
+                  {(fieldEditorData.type === "image" ||
+                    fieldEditorData.type === "signature") && (
                     <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300">
                       <input
                         type="checkbox"
                         checked={fieldEditorData.lockAspect ?? true}
-                        onChange={(e) => setFieldEditorData({ ...fieldEditorData, lockAspect: e.target.checked })}
+                        onChange={(e) =>
+                          setFieldEditorData({
+                            ...fieldEditorData,
+                            lockAspect: e.target.checked,
+                          })
+                        }
                         className="mr-2"
                       />
                       Lock Aspect Ratio
@@ -2413,11 +2906,18 @@ export default function AdvancedBillGeneratorPage() {
                   )}
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Font Size</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Font Size
+                    </label>
                     <input
                       type="number"
                       value={fieldEditorData.fontSize || 16}
-                      onChange={(e) => setFieldEditorData({ ...fieldEditorData, fontSize: parseInt(e.target.value) })}
+                      onChange={(e) =>
+                        setFieldEditorData({
+                          ...fieldEditorData,
+                          fontSize: parseInt(e.target.value),
+                        })
+                      }
                       className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                     />
                   </div>
@@ -2428,7 +2928,8 @@ export default function AdvancedBillGeneratorPage() {
               <div className="mt-6">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Labels & Captions ({(fieldEditorData.subElements || []).length})
+                    Labels & Captions (
+                    {(fieldEditorData.subElements || []).length})
                   </h4>
                   <button
                     type="button"
@@ -2443,11 +2944,14 @@ export default function AdvancedBillGeneratorPage() {
                         fontSize: 12,
                         textColor: "#6b7280",
                         isBold: false,
-                        isItalic: false
+                        isItalic: false,
                       };
                       setFieldEditorData({
                         ...fieldEditorData,
-                        subElements: [...(fieldEditorData.subElements || []), newSubElement]
+                        subElements: [
+                          ...(fieldEditorData.subElements || []),
+                          newSubElement,
+                        ],
                       });
                     }}
                     className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm py-1 px-3 rounded transition-colors duration-300"
@@ -2455,10 +2959,13 @@ export default function AdvancedBillGeneratorPage() {
                     + Add Label
                   </button>
                 </div>
-                
+
                 <div className="space-y-3 max-h-48 overflow-y-auto">
                   {(fieldEditorData.subElements || []).map((subEl, index) => (
-                    <div key={subEl.id} className="p-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700">
+                    <div
+                      key={subEl.id}
+                      className="p-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700"
+                    >
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -2468,15 +2975,23 @@ export default function AdvancedBillGeneratorPage() {
                             type="text"
                             value={subEl.content}
                             onChange={(e) => {
-                              const updated = [...(fieldEditorData.subElements || [])];
-                              updated[index] = { ...subEl, content: e.target.value };
-                              setFieldEditorData({ ...fieldEditorData, subElements: updated });
+                              const updated = [
+                                ...(fieldEditorData.subElements || []),
+                              ];
+                              updated[index] = {
+                                ...subEl,
+                                content: e.target.value,
+                              };
+                              setFieldEditorData({
+                                ...fieldEditorData,
+                                subElements: updated,
+                              });
                             }}
                             className="w-full text-sm border border-gray-300 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                             placeholder="Label text"
                           />
                         </div>
-                        
+
                         <div>
                           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Position
@@ -2484,9 +2999,18 @@ export default function AdvancedBillGeneratorPage() {
                           <select
                             value={subEl.position}
                             onChange={(e) => {
-                              const updated = [...(fieldEditorData.subElements || [])];
-                              updated[index] = { ...subEl, position: e.target.value as SubElement["position"] };
-                              setFieldEditorData({ ...fieldEditorData, subElements: updated });
+                              const updated = [
+                                ...(fieldEditorData.subElements || []),
+                              ];
+                              updated[index] = {
+                                ...subEl,
+                                position: e.target
+                                  .value as SubElement["position"],
+                              };
+                              setFieldEditorData({
+                                ...fieldEditorData,
+                                subElements: updated,
+                              });
                             }}
                             className="w-full text-sm border border-gray-300 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                           >
@@ -2496,7 +3020,7 @@ export default function AdvancedBillGeneratorPage() {
                             <option value="right">Right</option>
                           </select>
                         </div>
-                        
+
                         <div>
                           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Font Size
@@ -2505,16 +3029,24 @@ export default function AdvancedBillGeneratorPage() {
                             type="number"
                             value={subEl.fontSize}
                             onChange={(e) => {
-                              const updated = [...(fieldEditorData.subElements || [])];
-                              updated[index] = { ...subEl, fontSize: parseInt(e.target.value) || 12 };
-                              setFieldEditorData({ ...fieldEditorData, subElements: updated });
+                              const updated = [
+                                ...(fieldEditorData.subElements || []),
+                              ];
+                              updated[index] = {
+                                ...subEl,
+                                fontSize: parseInt(e.target.value) || 12,
+                              };
+                              setFieldEditorData({
+                                ...fieldEditorData,
+                                subElements: updated,
+                              });
                             }}
                             className="w-full text-sm border border-gray-300 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                             min="8"
                             max="24"
                           />
                         </div>
-                        
+
                         <div>
                           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Color
@@ -2523,15 +3055,23 @@ export default function AdvancedBillGeneratorPage() {
                             type="color"
                             value={subEl.textColor}
                             onChange={(e) => {
-                              const updated = [...(fieldEditorData.subElements || [])];
-                              updated[index] = { ...subEl, textColor: e.target.value };
-                              setFieldEditorData({ ...fieldEditorData, subElements: updated });
+                              const updated = [
+                                ...(fieldEditorData.subElements || []),
+                              ];
+                              updated[index] = {
+                                ...subEl,
+                                textColor: e.target.value,
+                              };
+                              setFieldEditorData({
+                                ...fieldEditorData,
+                                subElements: updated,
+                              });
                             }}
                             className="w-full h-8 border border-gray-300 rounded"
                           />
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center space-x-3">
                           <label className="flex items-center text-xs text-gray-700 dark:text-gray-300">
@@ -2539,9 +3079,17 @@ export default function AdvancedBillGeneratorPage() {
                               type="checkbox"
                               checked={subEl.isBold}
                               onChange={(e) => {
-                                const updated = [...(fieldEditorData.subElements || [])];
-                                updated[index] = { ...subEl, isBold: e.target.checked };
-                                setFieldEditorData({ ...fieldEditorData, subElements: updated });
+                                const updated = [
+                                  ...(fieldEditorData.subElements || []),
+                                ];
+                                updated[index] = {
+                                  ...subEl,
+                                  isBold: e.target.checked,
+                                };
+                                setFieldEditorData({
+                                  ...fieldEditorData,
+                                  subElements: updated,
+                                });
                               }}
                               className="mr-1"
                             />
@@ -2552,21 +3100,34 @@ export default function AdvancedBillGeneratorPage() {
                               type="checkbox"
                               checked={subEl.isItalic}
                               onChange={(e) => {
-                                const updated = [...(fieldEditorData.subElements || [])];
-                                updated[index] = { ...subEl, isItalic: e.target.checked };
-                                setFieldEditorData({ ...fieldEditorData, subElements: updated });
+                                const updated = [
+                                  ...(fieldEditorData.subElements || []),
+                                ];
+                                updated[index] = {
+                                  ...subEl,
+                                  isItalic: e.target.checked,
+                                };
+                                setFieldEditorData({
+                                  ...fieldEditorData,
+                                  subElements: updated,
+                                });
                               }}
                               className="mr-1"
                             />
                             Italic
                           </label>
                         </div>
-                        
+
                         <button
                           type="button"
                           onClick={() => {
-                            const updated = (fieldEditorData.subElements || []).filter((_, i) => i !== index);
-                            setFieldEditorData({ ...fieldEditorData, subElements: updated });
+                            const updated = (
+                              fieldEditorData.subElements || []
+                            ).filter((_, i) => i !== index);
+                            setFieldEditorData({
+                              ...fieldEditorData,
+                              subElements: updated,
+                            });
                           }}
                           className="bg-red-600 hover:bg-red-700 text-white text-xs py-1 px-2 rounded transition-colors duration-300"
                         >
@@ -2575,10 +3136,12 @@ export default function AdvancedBillGeneratorPage() {
                       </div>
                     </div>
                   ))}
-                  
-                  {(!fieldEditorData.subElements || fieldEditorData.subElements.length === 0) && (
+
+                  {(!fieldEditorData.subElements ||
+                    fieldEditorData.subElements.length === 0) && (
                     <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
-                      No labels or captions added yet. Click "Add Label" to get started.
+                      No labels or captions added yet. Click "Add Label" to get
+                      started.
                     </div>
                   )}
                 </div>
@@ -2586,34 +3149,57 @@ export default function AdvancedBillGeneratorPage() {
 
               {/* Styling Options */}
               <div className="mt-6">
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Styling Options</h4>
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  Styling Options
+                </h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Text Color</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Text Color
+                    </label>
                     <input
                       type="color"
                       value={fieldEditorData.textColor || "#000000"}
-                      onChange={(e) => setFieldEditorData({ ...fieldEditorData, textColor: e.target.value })}
+                      onChange={(e) =>
+                        setFieldEditorData({
+                          ...fieldEditorData,
+                          textColor: e.target.value,
+                        })
+                      }
                       className="w-full h-10 border border-gray-300 rounded"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Background Color</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Background Color
+                    </label>
                     <input
                       type="color"
                       value={fieldEditorData.backgroundColor || "#ffffff"}
-                      onChange={(e) => setFieldEditorData({ ...fieldEditorData, backgroundColor: e.target.value })}
+                      onChange={(e) =>
+                        setFieldEditorData({
+                          ...fieldEditorData,
+                          backgroundColor: e.target.value,
+                        })
+                      }
                       className="w-full h-10 border border-gray-300 rounded"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Border Color</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Border Color
+                    </label>
                     <input
                       type="color"
                       value={fieldEditorData.borderColor || "#e5e7eb"}
-                      onChange={(e) => setFieldEditorData({ ...fieldEditorData, borderColor: e.target.value })}
+                      onChange={(e) =>
+                        setFieldEditorData({
+                          ...fieldEditorData,
+                          borderColor: e.target.value,
+                        })
+                      }
                       className="w-full h-10 border border-gray-300 rounded"
                     />
                   </div>
@@ -2621,21 +3207,35 @@ export default function AdvancedBillGeneratorPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Border Width</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Border Width
+                    </label>
                     <input
                       type="number"
                       value={fieldEditorData.borderWidth || 1}
-                      onChange={(e) => setFieldEditorData({ ...fieldEditorData, borderWidth: parseInt(e.target.value) })}
+                      onChange={(e) =>
+                        setFieldEditorData({
+                          ...fieldEditorData,
+                          borderWidth: parseInt(e.target.value),
+                        })
+                      }
                       className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Border Radius</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Border Radius
+                    </label>
                     <input
                       type="number"
                       value={fieldEditorData.borderRadius || 6}
-                      onChange={(e) => setFieldEditorData({ ...fieldEditorData, borderRadius: parseInt(e.target.value) })}
+                      onChange={(e) =>
+                        setFieldEditorData({
+                          ...fieldEditorData,
+                          borderRadius: parseInt(e.target.value),
+                        })
+                      }
                       className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                     />
                   </div>
@@ -2645,7 +3245,12 @@ export default function AdvancedBillGeneratorPage() {
                       <input
                         type="checkbox"
                         checked={fieldEditorData.isBold || false}
-                        onChange={(e) => setFieldEditorData({ ...fieldEditorData, isBold: e.target.checked })}
+                        onChange={(e) =>
+                          setFieldEditorData({
+                            ...fieldEditorData,
+                            isBold: e.target.checked,
+                          })
+                        }
                         className="mr-2"
                       />
                       Bold
@@ -2654,7 +3259,12 @@ export default function AdvancedBillGeneratorPage() {
                       <input
                         type="checkbox"
                         checked={fieldEditorData.isItalic || false}
-                        onChange={(e) => setFieldEditorData({ ...fieldEditorData, isItalic: e.target.checked })}
+                        onChange={(e) =>
+                          setFieldEditorData({
+                            ...fieldEditorData,
+                            isItalic: e.target.checked,
+                          })
+                        }
                         className="mr-2"
                       />
                       Italic
@@ -2664,10 +3274,16 @@ export default function AdvancedBillGeneratorPage() {
               </div>
 
               <div className="flex gap-3 mt-6">
-                <button onClick={saveField} className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-300">
+                <button
+                  onClick={saveField}
+                  className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-300"
+                >
                   Save Field
                 </button>
-                <button onClick={() => setShowFieldEditor(false)} className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-300">
+                <button
+                  onClick={() => setShowFieldEditor(false)}
+                  className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-300"
+                >
                   Cancel
                 </button>
               </div>
@@ -2681,7 +3297,9 @@ export default function AdvancedBillGeneratorPage() {
             <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
               <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Bill Preview - {previewTemplate.name}</h3>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                    Bill Preview - {previewTemplate.name}
+                  </h3>
                   <button
                     onClick={() => setShowBillPreview(false)}
                     className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl"
@@ -2694,8 +3312,18 @@ export default function AdvancedBillGeneratorPage() {
                     onClick={exportToPDF}
                     className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition-colors duration-300 flex items-center gap-2"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
                     </svg>
                     Export PDF
                   </button>
@@ -2703,8 +3331,18 @@ export default function AdvancedBillGeneratorPage() {
                     onClick={exportToWord}
                     className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors duration-300 flex items-center gap-2"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
                     </svg>
                     Export Word (RTF)
                   </button>
@@ -2712,8 +3350,18 @@ export default function AdvancedBillGeneratorPage() {
                     onClick={exportAsImage}
                     className="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg transition-colors duration-300 flex items-center gap-2"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
                     </svg>
                     Export Image
                   </button>
@@ -2721,8 +3369,18 @@ export default function AdvancedBillGeneratorPage() {
                     onClick={printBill}
                     className="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition-colors duration-300 flex items-center gap-2"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                      />
                     </svg>
                     Print
                   </button>
@@ -2733,14 +3391,24 @@ export default function AdvancedBillGeneratorPage() {
                     }}
                     className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors duration-300 flex items-center gap-2"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
                     </svg>
                     Edit Template
                   </button>
                 </div>
               </div>
-              
+
               <div className="p-6 overflow-auto max-h-[calc(90vh-200px)]">
                 <div className="flex justify-center">
                   <div className="border border-gray-300 rounded-lg overflow-hidden shadow-lg">
@@ -2750,9 +3418,9 @@ export default function AdvancedBillGeneratorPage() {
                       height={previewTemplate.height}
                       className="max-w-full h-auto"
                       style={{
-                        maxWidth: '100%',
-                        height: 'auto',
-                        display: 'block'
+                        maxWidth: "100%",
+                        height: "auto",
+                        display: "block",
                       }}
                     />
                   </div>
@@ -2766,19 +3434,30 @@ export default function AdvancedBillGeneratorPage() {
         {showTemplateSettings && currentTemplate && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Template Settings</h3>
-              
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                Template Settings
+              </h3>
+
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Template Name</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Template Name
+                  </label>
                   <input
                     type="text"
                     value={currentTemplate.name}
                     onChange={(e) => {
                       saveStateForUndo();
-                      const updatedTemplate = { ...currentTemplate, name: e.target.value };
+                      const updatedTemplate = {
+                        ...currentTemplate,
+                        name: e.target.value,
+                      };
                       setCurrentTemplate(updatedTemplate);
-                      setTemplates(prev => prev.map(t => t.id === currentTemplate.id ? updatedTemplate : t));
+                      setTemplates((prev) =>
+                        prev.map((t) =>
+                          t.id === currentTemplate.id ? updatedTemplate : t
+                        )
+                      );
                     }}
                     className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                     placeholder="Enter template name"
@@ -2786,14 +3465,23 @@ export default function AdvancedBillGeneratorPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Description
+                  </label>
                   <textarea
                     value={currentTemplate.description}
                     onChange={(e) => {
                       saveStateForUndo();
-                      const updatedTemplate = { ...currentTemplate, description: e.target.value };
+                      const updatedTemplate = {
+                        ...currentTemplate,
+                        description: e.target.value,
+                      };
                       setCurrentTemplate(updatedTemplate);
-                      setTemplates(prev => prev.map(t => t.id === currentTemplate.id ? updatedTemplate : t));
+                      setTemplates((prev) =>
+                        prev.map((t) =>
+                          t.id === currentTemplate.id ? updatedTemplate : t
+                        )
+                      );
                     }}
                     className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-vertical"
                     placeholder="Enter template description"
@@ -2803,16 +3491,28 @@ export default function AdvancedBillGeneratorPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Width (px)</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Width (px)
+                    </label>
                     <input
                       type="number"
                       value={currentTemplate.width}
                       onChange={(e) => {
                         saveStateForUndo();
-                        const newWidth = Math.max(400, parseInt(e.target.value) || 800);
-                        const updatedTemplate = { ...currentTemplate, width: newWidth };
+                        const newWidth = Math.max(
+                          400,
+                          parseInt(e.target.value) || 800
+                        );
+                        const updatedTemplate = {
+                          ...currentTemplate,
+                          width: newWidth,
+                        };
                         setCurrentTemplate(updatedTemplate);
-                        setTemplates(prev => prev.map(t => t.id === currentTemplate.id ? updatedTemplate : t));
+                        setTemplates((prev) =>
+                          prev.map((t) =>
+                            t.id === currentTemplate.id ? updatedTemplate : t
+                          )
+                        );
                       }}
                       className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                       min="400"
@@ -2821,16 +3521,28 @@ export default function AdvancedBillGeneratorPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Height (px)</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Height (px)
+                    </label>
                     <input
                       type="number"
                       value={currentTemplate.height}
                       onChange={(e) => {
                         saveStateForUndo();
-                        const newHeight = Math.max(400, parseInt(e.target.value) || 1120);
-                        const updatedTemplate = { ...currentTemplate, height: newHeight };
+                        const newHeight = Math.max(
+                          400,
+                          parseInt(e.target.value) || 1120
+                        );
+                        const updatedTemplate = {
+                          ...currentTemplate,
+                          height: newHeight,
+                        };
                         setCurrentTemplate(updatedTemplate);
-                        setTemplates(prev => prev.map(t => t.id === currentTemplate.id ? updatedTemplate : t));
+                        setTemplates((prev) =>
+                          prev.map((t) =>
+                            t.id === currentTemplate.id ? updatedTemplate : t
+                          )
+                        );
                       }}
                       className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                       min="400"
@@ -2840,9 +3552,12 @@ export default function AdvancedBillGeneratorPage() {
                 </div>
 
                 <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Template Info</h4>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Template Info
+                  </h4>
                   <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Fields: {currentTemplate.fields.length} • Created: {currentTemplate.createdAt.toLocaleDateString()}
+                    Fields: {currentTemplate.fields.length} • Created:{" "}
+                    {currentTemplate.createdAt.toLocaleDateString()}
                   </p>
                 </div>
               </div>
@@ -2861,9 +3576,9 @@ export default function AdvancedBillGeneratorPage() {
                       ...currentTemplate,
                       id: `tpl-${Date.now()}`,
                       name: `${currentTemplate.name} (Copy)`,
-                      createdAt: new Date()
+                      createdAt: new Date(),
                     };
-                    setTemplates(prev => [...prev, templateCopy]);
+                    setTemplates((prev) => [...prev, templateCopy]);
                     setCurrentTemplate(templateCopy);
                     setShowTemplateSettings(false);
                   }}
@@ -2879,30 +3594,44 @@ export default function AdvancedBillGeneratorPage() {
         {/* Instructions */}
         {!currentTemplate && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 border border-gray-200 dark:border-gray-700">
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">Advanced Features</h3>
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
+              Advanced Features
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center">
                 <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl">🎨</span>
                 </div>
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Advanced Styling</h4>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">Custom colors, fonts, borders, and positioning</p>
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+                  Advanced Styling
+                </h4>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
+                  Custom colors, fonts, borders, and positioning
+                </p>
               </div>
 
               <div className="text-center">
                 <div className="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl">🖱️</span>
                 </div>
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Drag & Drop</h4>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">Visual field positioning and resizing</p>
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+                  Drag & Drop
+                </h4>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
+                  Visual field positioning and resizing
+                </p>
               </div>
 
               <div className="text-center">
                 <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl">⚙️</span>
                 </div>
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Professional</h4>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">Create business-ready bill templates</p>
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+                  Professional
+                </h4>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
+                  Create business-ready bill templates
+                </p>
               </div>
             </div>
           </div>
