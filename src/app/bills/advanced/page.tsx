@@ -110,6 +110,35 @@ export default function AdvancedBillGeneratorPage() {
     if (!currentTemplate && templates.length > 0) setCurrentTemplate(templates[0]);
   }, [templates, currentTemplate]);
 
+  // CRUD helpers
+  const updateField = (id: string, patch: Partial<TemplateField>) => {
+    setTemplates((prev) =>
+      prev.map((t) =>
+        t.id !== (currentTemplate?.id || t.id)
+          ? t
+          : {
+              ...t,
+              fields: t.fields.map((f) => (f.id === id ? { ...f, ...patch } : f)),
+            }
+      )
+    );
+    // also update local currentTemplate state reference
+    setCurrentTemplate((ct) =>
+      ct && ct.id === (currentTemplate?.id || ct.id)
+        ? { ...ct, fields: ct.fields.map((f) => (f.id === id ? { ...f, ...patch } : f)) }
+        : ct
+    );
+  };
+
+  const deleteField = (id: string) => {
+    if (!currentTemplate) return;
+    setTemplates((prev) =>
+      prev.map((t) => (t.id === currentTemplate.id ? { ...t, fields: t.fields.filter((f) => f.id !== id) } : t))
+    );
+    setCurrentTemplate((ct) => (ct ? { ...ct, fields: ct.fields.filter((f) => f.id !== id) } : ct));
+    setSelectedField(null);
+  };
+
   // Render template to canvas
   const renderTemplate = useCallback(() => {
     const canvas = canvasRef.current;
@@ -127,16 +156,12 @@ export default function AdvancedBillGeneratorPage() {
     // Draw fields
     for (const field of currentTemplate.fields) {
       // Box background
-      if (field.backgroundColor) {
-        ctx.fillStyle = field.backgroundColor;
-        roundRect(ctx, field.x, field.y, field.width, field.height, field.borderRadius || 0, true, false);
-      }
-
-      // Border
-      if (field.borderWidth > 0) {
+      if (!((field.type === "image" || field.type === "signature") && field.value)) {
+        ctx.fillStyle = field.backgroundColor || "#ffffff";
+        ctx.fillRect(field.x, field.y, field.width, field.height);
         ctx.strokeStyle = field.borderColor || "#e5e7eb";
-        ctx.lineWidth = field.borderWidth;
-        roundRect(ctx, field.x, field.y, field.width, field.height, field.borderRadius || 0, false, true);
+        ctx.lineWidth = field.borderWidth || 1;
+        ctx.strokeRect(field.x, field.y, field.width, field.height);
       }
 
       if (field.type === "image" || field.type === "signature") {
@@ -250,7 +275,7 @@ export default function AdvancedBillGeneratorPage() {
   }, [renderTemplate]);
 
   // Helpers
-  function roundRect(
+  const roundRect = (
     ctx: CanvasRenderingContext2D,
     x: number,
     y: number,
@@ -259,7 +284,7 @@ export default function AdvancedBillGeneratorPage() {
     radius: number,
     fill: boolean,
     stroke: boolean
-  ) {
+  ) => {
     const r = Math.min(radius || 0, width / 2, height / 2);
     ctx.beginPath();
     ctx.moveTo(x + r, y);
@@ -270,15 +295,26 @@ export default function AdvancedBillGeneratorPage() {
     ctx.closePath();
     if (fill) ctx.fill();
     if (stroke) ctx.stroke();
-  }
+  };
 
-  function getMousePos(e: React.MouseEvent<HTMLCanvasElement>) {
+  const getMousePos = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    return { x, y };
-  }
+    
+    // Calculate scale factors in case of any CSS scaling
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    // Get mouse position relative to canvas
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    
+    // Ensure coordinates are within canvas bounds
+    return {
+      x: Math.max(0, Math.min(x, canvas.width)),
+      y: Math.max(0, Math.min(y, canvas.height))
+    };
+  };
 
   function hitTest(px: number, py: number): TemplateField | null {
     if (!currentTemplate) return null;
@@ -353,13 +389,13 @@ export default function AdvancedBillGeneratorPage() {
       ctx.fillRect(c.x - size / 2, c.y - size / 2, size, size);
       ctx.strokeRect(c.x - size / 2, c.y - size / 2, size, size);
     });
-  }
+  };
 
-  function getHandleAtPosition(
+  const getHandleAtPosition = (
     px: number,
     py: number,
     field: TemplateField
-  ): ResizeHandle {
+  ): ResizeHandle => {
     const size = 6;
     
     let handleX = field.x;
@@ -398,7 +434,7 @@ export default function AdvancedBillGeneratorPage() {
       if (Math.abs(px - h.x) <= size && Math.abs(py - h.y) <= size) return h.key;
     }
     return null;
-  }
+  };
 
   // Mouse handlers
   const handleMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -428,7 +464,18 @@ export default function AdvancedBillGeneratorPage() {
     if (isDragging && selectedField) {
       const nx = curX - dragOffset.x;
       const ny = curY - dragOffset.y;
-      updateField(selectedField.id, { x: Math.max(0, nx), y: Math.max(0, ny) });
+      // Allow moving to canvas edges (0,0) and constrain within canvas bounds
+      const canvasWidth = currentTemplate.width;
+      const canvasHeight = currentTemplate.height;
+      
+      // Allow fields to be positioned exactly at the edges
+      const constrainedX = Math.max(0, Math.min(nx, canvasWidth - selectedField.width));
+      const constrainedY = Math.max(0, Math.min(ny, canvasHeight - selectedField.height));
+      
+      // Only update if position actually changed
+      if (selectedField.x !== constrainedX || selectedField.y !== constrainedY) {
+        updateField(selectedField.id, { x: constrainedX, y: constrainedY });
+      }
       return;
     }
 
@@ -460,7 +507,12 @@ export default function AdvancedBillGeneratorPage() {
           break;
         case "w":
           newW = Math.max(minSize, orig.width - dx);
-          newX = orig.x + dx;
+          // Allow moving to left edge even if width hits minimum
+          if (newW === minSize) {
+            newX = Math.max(0, orig.x + orig.width - minSize);
+          } else {
+            newX = orig.x + dx;
+          }
           applyAspect();
           break;
         case "s":
@@ -485,20 +537,45 @@ export default function AdvancedBillGeneratorPage() {
           break;
         case "sw":
           newW = Math.max(minSize, orig.width - dx);
-          newX = orig.x + dx;
           newH = Math.max(minSize, orig.height + dy);
+          // Allow moving to left edge even if width hits minimum
+          if (newW === minSize) {
+            newX = Math.max(0, orig.x + orig.width - minSize);
+          } else {
+            newX = orig.x + dx;
+          }
           applyAspect();
           break;
         case "nw":
           newW = Math.max(minSize, orig.width - dx);
-          newX = orig.x + dx;
           newH = Math.max(minSize, orig.height - dy);
+          // Allow moving to left edge even if width hits minimum
+          if (newW === minSize) {
+            newX = Math.max(0, orig.x + orig.width - minSize);
+          } else {
+            newX = orig.x + dx;
+          }
           newY = orig.y + dy;
           applyAspect();
           break;
       }
 
-      updateField(orig.id, { x: newX, y: newY, width: newW, height: newH });
+      // Apply canvas boundary constraints for resize operations
+      const canvasWidth = currentTemplate.width;
+      const canvasHeight = currentTemplate.height;
+      
+      // Ensure field stays within canvas bounds
+      const constrainedX = Math.max(0, Math.min(newX, canvasWidth - Math.max(minSize, newW)));
+      const constrainedY = Math.max(0, Math.min(newY, canvasHeight - Math.max(minSize, newH)));
+      const constrainedW = Math.min(Math.max(minSize, newW), canvasWidth - constrainedX);
+      const constrainedH = Math.min(Math.max(minSize, newH), canvasHeight - constrainedY);
+      
+      updateField(orig.id, { 
+        x: constrainedX, 
+        y: constrainedY, 
+        width: constrainedW, 
+        height: constrainedH 
+      });
       return;
     }
   };
@@ -517,32 +594,6 @@ export default function AdvancedBillGeneratorPage() {
     setSelectedField(f);
   };
 
-  // CRUD helpers
-  const updateField = (id: string, patch: Partial<TemplateField>) => {
-    setTemplates((prev) =>
-      prev.map((t) =>
-        t.id !== (currentTemplate?.id || t.id)
-          ? t
-          : {
-              ...t,
-              fields: t.fields.map((f) => (f.id === id ? { ...f, ...patch } : f)),
-            }
-      )
-    );
-    // also update local currentTemplate state reference
-    setCurrentTemplate((ct) =>
-      ct && ct.id === (currentTemplate?.id || ct.id)
-        ? { ...ct, fields: ct.fields.map((f) => (f.id === id ? { ...f, ...patch } : f)) }
-        : ct
-    );
-  };
-
-  const deleteField = (id: string) => {
-    if (!currentTemplate) return;
-    setTemplates((prev) => prev.map((t) => (t.id === currentTemplate.id ? { ...t, fields: t.fields.filter((f) => f.id !== id) } : t)));
-    setCurrentTemplate((ct) => (ct ? { ...ct, fields: ct.fields.filter((f) => f.id !== id) } : ct));
-    if (selectedField?.id === id) setSelectedField(null);
-  };
 
   const createNewTemplate = () => {
     const idx = templates.length + 1;
@@ -901,18 +952,29 @@ export default function AdvancedBillGeneratorPage() {
             </div>
 
             {/* Template Canvas */}
-            <div className="flex justify-center mb-6">
-              <div className="relative">
+            <div className="flex justify-center mb-6 overflow-auto">
+              <div 
+                className="relative bg-white"
+                style={{
+                  width: currentTemplate.width,
+                  height: currentTemplate.height,
+                  minWidth: currentTemplate.width,
+                  minHeight: currentTemplate.height
+                }}
+              >
                 <canvas
                   ref={canvasRef}
                   width={currentTemplate.width}
                   height={currentTemplate.height}
-                  className="border-2 border-gray-300 rounded-lg"
+                  className="absolute top-0 left-0 w-full h-full border-2 border-gray-300 rounded-lg"
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
                   onClick={handleCanvasClick}
-                  style={{ cursor: isEditing ? "move" : "default" }}
+                  style={{ 
+                    cursor: isEditing ? "move" : "default",
+                    touchAction: 'none'
+                  }}
                 />
 
                 {isEditing && (

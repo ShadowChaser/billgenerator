@@ -248,8 +248,9 @@ export default function DashboardPage() {
                   🧾 Manual Bill Template
                 </h4>
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Create bills manually using the built-in template. Go to <span className="font-semibold">Create New Bill</span>,
-                  fill the required fields, preview, and download the PDF.
+                  Create bills manually using the built-in template. Go to{" "}
+                  <span className="font-semibold">Create New Bill</span>, fill
+                  the required fields, preview, and download the PDF.
                 </p>
               </div>
 
