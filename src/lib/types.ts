@@ -5,6 +5,7 @@ export interface Landlord {
   name: string;
   address?: string | null;
   signature_url?: string | null;
+  signature_name?: string | null;
   created_at: string;
 }
 

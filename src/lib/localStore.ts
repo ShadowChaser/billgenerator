@@ -40,6 +40,16 @@ export function saveLandlord(newLandlord: Landlord): void {
   writeArray(LANDLORDS_KEY, list);
 }
 
+export function clearLandlords(): void {
+  writeArray(LANDLORDS_KEY, []);
+}
+
+export function deleteLandlord(id: string): void {
+  const list = getLandlords();
+  const next = list.filter((l) => l.id !== id);
+  writeArray(LANDLORDS_KEY, next);
+}
+
 export function getBills(): Bill[] {
   return readArray<Bill>(BILLS_KEY);
 }

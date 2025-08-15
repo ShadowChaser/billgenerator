@@ -51,6 +51,10 @@ export default function NewBillPage() {
   const [previewScale, setPreviewScale] = useState(1);
   const previewInnerRef = useRef<HTMLDivElement | null>(null);
   const [baseHeight, setBaseHeight] = useState(1123);
+  const [signatureFileName, setSignatureFileName] = useState<string | null>(
+    null
+  );
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const form = useForm<BillFormInput>({
     resolver: zodResolver(billFormSchema),
@@ -65,8 +69,13 @@ export default function NewBillPage() {
   });
 
   useEffect(() => {
-    setLandlords(getLandlordsLocal());
-    form.setValue("landlord_mode", "manual");
+    const list = getLandlordsLocal();
+    setLandlords(list);
+    // Default to existing if we have saved landlords, otherwise manual
+    form.setValue("landlord_mode", list.length > 0 ? "existing" : "manual");
+    if (list.length > 0) {
+      form.setValue("landlord_id", list[0].id);
+    }
   }, [form]);
 
   // Resize preview to fit container without cutting content
@@ -105,7 +114,27 @@ export default function NewBillPage() {
     return () => cancelAnimationFrame(r);
   }, [previewHtml, previewScale]);
 
+  const landlordMode = form.watch("landlord_mode");
   const landlordNameManual = form.watch("landlord_name")?.trim() ?? "";
+  const landlordIdExisting = form.watch("landlord_id") ?? "";
+
+  // Auto-fill signature from existing landlord selection
+  useEffect(() => {
+    if (landlordMode === "existing" && landlordIdExisting) {
+      const existing = landlords.find((l) => l.id === landlordIdExisting);
+      if (existing?.signature_url) {
+        form.setValue("signature_url", existing.signature_url);
+      } else {
+        form.setValue("signature_url", null);
+      }
+    }
+    if (landlordMode === "manual") {
+      // Avoid carrying over signature_url from previous existing selection
+      form.setValue("signature_url", null);
+    }
+    // Reset displayed file name when landlord selection/mode changes
+    setSignatureFileName(null);
+  }, [landlordMode, landlordIdExisting, landlords, form]);
 
   const handleFieldsExtracted = (fields: Partial<BillFormInput>) => {
     // Set extracted fields to form
@@ -142,22 +171,38 @@ export default function NewBillPage() {
 
       const fileList = (values as { signature_file?: FileList }).signature_file;
       const file: File | undefined = fileList?.[0];
+      let signatureName: string | null = null;
       if (file) {
         signatureUrl = await fileToDataUrl(file);
+        signatureName = file.name ?? null;
       }
 
-      // Landlord is manual only; ensure it exists in local storage
-      const newLandlord: Landlord = {
-        id: uuidv4(),
-        name: landlordNameManual,
-        address: "",
-        signature_url: undefined,
-        created_at: new Date().toISOString(),
-      };
-      saveLandlord(newLandlord);
-      setLandlords((prev) => [newLandlord, ...prev]);
-      const landlordIdForBill = newLandlord.id;
-      const landlordNameForPdf = newLandlord.name;
+      let landlordIdForBill: string;
+      let landlordNameForPdf: string;
+
+      if (values.landlord_mode === "existing" && values.landlord_id) {
+        // Use existing landlord; if no signature uploaded this time, fallback to saved landlord signature
+        const existing = landlords.find((l) => l.id === values.landlord_id);
+        landlordIdForBill = values.landlord_id;
+        landlordNameForPdf = existing?.name ?? "";
+        if (!file && !signatureUrl && existing?.signature_url) {
+          signatureUrl = existing.signature_url;
+        }
+      } else {
+        // Manual mode: save landlord (including provided signature) to local storage
+        const newLandlord: Landlord = {
+          id: uuidv4(),
+          name: landlordNameManual,
+          address: "",
+          signature_url: signatureUrl ?? undefined,
+          signature_name: signatureName ?? undefined,
+          created_at: new Date().toISOString(),
+        };
+        saveLandlord(newLandlord);
+        setLandlords((prev) => [newLandlord, ...prev]);
+        landlordIdForBill = newLandlord.id;
+        landlordNameForPdf = newLandlord.name;
+      }
 
       const newBill: Bill = {
         id: uuidv4(),
@@ -405,8 +450,50 @@ export default function NewBillPage() {
 
         <div className="rounded-md ring-1 ring-inset p-3 sm:p-4 grid gap-3 sm:gap-4">
           <div className="text-sm font-semibold opacity-80">Landlord</div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className={`px-3 py-1 rounded text-sm ring-1 ring-inset ${landlordMode === "existing" ? "bg-foreground text-background" : ""}`}
+              onClick={() => form.setValue("landlord_mode", "existing")}
+            >
+              Existing
+            </button>
+            <button
+              type="button"
+              className={`px-3 py-1 rounded text-sm ring-1 ring-inset ${landlordMode === "manual" ? "bg-foreground text-background" : ""}`}
+              onClick={() => form.setValue("landlord_mode", "manual")}
+            >
+              Manual
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 min-w-0">
-            <div className="grid gap-2">
+            {landlordMode === "existing" ? (
+              <label className="grid gap-1">
+                <span className="text-sm">Saved Landlords</span>
+                <select
+                  className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
+                  value={landlordIdExisting}
+                  onChange={(e) => form.setValue("landlord_id", e.target.value)}
+                >
+                  {landlords.length === 0 ? (
+                    <option value="" disabled>
+                      No landlords saved
+                    </option>
+                  ) : null}
+                  {landlords.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
+                {form.formState.errors.landlord_id && (
+                  <span className="text-xs text-red-600">
+                    {form.formState.errors.landlord_id.message as string}
+                  </span>
+                )}
+              </label>
+            ) : (
               <label className="grid gap-1">
                 <span className="text-sm">Landlord Name</span>
                 <input
@@ -416,11 +503,12 @@ export default function NewBillPage() {
                 />
                 {form.formState.errors.landlord_name && (
                   <span className="text-xs text-red-600">
-                    Enter a landlord name
+                    {form.formState.errors.landlord_name.message as string}
                   </span>
                 )}
               </label>
-            </div>
+            )}
+
             <label className="grid gap-1">
               <span className="text-sm">Agreement Date</span>
               <Controller
@@ -482,12 +570,52 @@ export default function NewBillPage() {
             </label>
             <label className="grid gap-1">
               <span className="text-sm">Signature Image (optional)</span>
+              {/* Hidden real input */}
               <input
+                ref={fileInputRef}
                 type="file"
                 accept="image/*"
-                className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
-                {...form.register("signature_file")}
+                className="hidden"
+                onChange={(e) => {
+                  const reg = form.register("signature_file");
+                  reg.onChange(e);
+                  const file = e.target.files?.[0];
+                  setSignatureFileName(file ? file.name : null);
+                }}
               />
+              {/* Visible proxy control */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="ring-1 ring-inset rounded px-3 py-2 w-full text-left bg-transparent hover:bg-foreground/5"
+                aria-label="Choose signature image file"
+              >
+                {(() => {
+                  const existing =
+                    landlordMode === "existing" && landlordIdExisting
+                      ? landlords.find((l) => l.id === landlordIdExisting)
+                      : undefined;
+                  const displayName =
+                    signatureFileName || existing?.signature_name || null;
+                  return (
+                    <span className="opacity-80">
+                      Choose File {displayName ?? "No file chosen"}
+                    </span>
+                  );
+                })()}
+              </button>
+              {landlordMode === "existing" && (() => {
+                const existing = landlords.find((l) => l.id === landlordIdExisting);
+                if (existing?.signature_url) {
+                  const name = existing.signature_name ?? null;
+                  return (
+                    <span className="text-xs opacity-70">
+                      Using saved signature{name ? `: ${name}` : ""} from selected landlord. Upload a file to replace.
+                    </span>
+                  );
+                }
+                return null;
+              })()}
             </label>
           </div>
         </div>
