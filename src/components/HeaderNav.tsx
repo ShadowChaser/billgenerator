@@ -11,6 +11,7 @@ export default function HeaderNav() {
         <nav className="flex gap-3 text-sm items-center flex-wrap sm:flex-nowrap">
           <Link href="/dashboard">Dashboard</Link>
           <Link href="/bills/new">New Bill</Link>
+          <Link href="/bills/advanced">Advanced Generator</Link>
           <Link href="/bills">Bills</Link>
           <Link href="/landlords">Landlords</Link>
         </nav>

@@ -6,6 +6,18 @@ declare module "pdfjs-dist" {
 
   export interface PDFPageProxy {
     getTextContent(): Promise<TextContent>;
+    getViewport(params: { scale: number }): PDFPageViewport;
+    render(params: RenderParams): { promise: Promise<void> };
+  }
+
+  export interface PDFPageViewport {
+    width: number;
+    height: number;
+  }
+
+  export interface RenderParams {
+    canvasContext: CanvasRenderingContext2D;
+    viewport: PDFPageViewport;
   }
 
   export interface TextContent {
