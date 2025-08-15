@@ -341,26 +341,14 @@ export default function NewBillPage() {
         // eslint-disable-next-line no-console
         console.log("[NewBill] Normalized templates:", nextTemplates.length);
 
-        // Auto-select last opened template if available; otherwise keep current selection if valid; else pick first
+        // Keep default (None) on initial load. Preserve current selection if still valid; otherwise clear.
         try {
-          const lastId = window.localStorage.getItem(LAST_TEMPLATE_KEY) || "";
-          const hasLast = lastId && nextTemplates.some((t) => t.id === lastId);
-          if (hasLast) {
-            setSelectedTemplateId((prev) =>
-              prev && prev === lastId ? prev : lastId
-            );
+          setSelectedTemplateId((prev) => {
+            if (prev && nextTemplates.some((t) => t.id === prev)) return prev;
             // eslint-disable-next-line no-console
-            console.log("[NewBill] Selected last template id:", lastId);
-          } else {
-            setSelectedTemplateId((prev) => {
-              if (prev && nextTemplates.some((t) => t.id === prev)) return prev;
-              const fallback =
-                nextTemplates.length > 0 ? nextTemplates[0].id : "";
-              // eslint-disable-next-line no-console
-              console.log("[NewBill] Selected fallback template id:", fallback);
-              return fallback;
-            });
-          }
+            console.log("[NewBill] Keeping default template selection (None)");
+            return "";
+          });
         } catch {}
       }
     } catch {}
