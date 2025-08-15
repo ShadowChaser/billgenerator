@@ -831,8 +831,8 @@ export default function NewBillPage() {
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([baseWidth, pageHeight]);
 
-    const fontRegular = await pdfDoc.embedStandardFont(StandardFonts.Helvetica);
-    const fontBold = await pdfDoc.embedStandardFont(StandardFonts.HelveticaBold);
+    const fontRegular = await pdfDoc.embedStandardFont(StandardFonts.TimesRoman);
+    const fontBold = await pdfDoc.embedStandardFont(StandardFonts.TimesRomanBold);
 
     // Helpers for drawing from top-left coordinate system
     const drawText = (
@@ -840,12 +840,12 @@ export default function NewBillPage() {
       x: number,
       yTop: number,
       size: number,
-      opts?: { bold?: boolean; underline?: boolean }
+      opts?: { bold?: boolean; underline?: boolean; color?: ReturnType<typeof rgb> }
     ) => {
       const font = opts?.bold ? fontBold : fontRegular;
       const ascent = font.sizeAtHeight(size);
       const y = pageHeight - (yTop + ascent);
-      page.drawText(text, { x, y, size, font, color: rgb(0, 0, 0) });
+      page.drawText(text, { x, y, size, font, color: opts?.color ?? rgb(0, 0, 0) });
       if (opts?.underline) {
         const width = font.widthOfTextAtSize(text, size);
         const underlineY = y - 2;
@@ -928,15 +928,10 @@ export default function NewBillPage() {
     // Left: BILL NO:, Right: DATE:
     const leftText = `BILL NO:${billNo}`;
     const rightText = `DATE: ${billDateDisplay}`;
-    const leftW = fontBold.widthOfTextAtSize(leftText, 12);
     drawText(leftText, padLeft, cursorY, 12, { bold: true });
-    drawText(
-      rightText,
-      padLeft + Math.max(280, Math.min(detailsMaxW - 160, leftW + 120)),
-      cursorY,
-      12,
-      { bold: true }
-    );
+    const rightW = fontBold.widthOfTextAtSize(rightText, 12);
+    const rightX = baseWidth - padRight - rightW;
+    drawText(rightText, rightX, cursorY, 12, { bold: true });
 
     // Intro paragraph
     cursorY += 28;
@@ -1018,8 +1013,8 @@ export default function NewBillPage() {
     // Signature block at bottom-right
     const sigBlockBottom = padBottom - 20; // keep some spacing from page bottom padding
     const sigBlockRight = padRight;
-    const sigImgMaxW = 180;
-    const sigImgMaxH = 80;
+    const sigImgMaxW = 140; // further smaller to reduce blur
+    const sigImgMaxH = 50;  // further smaller height
     let sigYTop = pageHeight - sigBlockBottom - sigImgMaxH; // approximate top position for image
     let signatureUrl: string | null = values.signature_url || null;
     if (!signatureUrl && values.landlord_mode === "existing" && values.landlord_id) {
@@ -1035,14 +1030,25 @@ export default function NewBillPage() {
         const dw = img.width * scale;
         const dh = img.height * scale;
         const dx = baseWidth - sigBlockRight - dw;
-        const dy = pageHeight - (sigYTop + dh);
+        // Anchor the image just above the first signature label with a small gap
+        const label1Top = pageHeight - padBottom + 40; // yTop used for first label
+        const gap = 6; // tighter distance between image bottom and label top
+        const dy = pageHeight - (label1Top - gap);
         page.drawImage(img, { x: dx, y: dy, width: dw, height: dh });
         sigYTop += dh + 8;
       } catch {}
     }
-    // Signature text lines
-    drawText("Signature of House", baseWidth - sigBlockRight - 180, pageHeight - padBottom + 40, 12);
-    drawText("Owner", baseWidth - sigBlockRight - 60, pageHeight - padBottom + 58, 12);
+    // Signature text lines (centered within a right-aligned box)
+    const labelBoxW = 200;
+    const labelLeft = baseWidth - sigBlockRight - labelBoxW;
+    const sigLine1 = "Signature of House";
+    const sigLine2 = "Owner";
+    const sig1W = fontRegular.widthOfTextAtSize(sigLine1, 12);
+    const sig2W = fontRegular.widthOfTextAtSize(sigLine2, 12);
+    const sig1X = labelLeft + (labelBoxW - sig1W) / 2;
+    const sig2X = labelLeft + (labelBoxW - sig2W) / 2;
+    drawText(sigLine1, sig1X, pageHeight - padBottom + 40, 12);
+    drawText(sigLine2, sig2X, pageHeight - padBottom + 58, 12);
 
     // Save
     const bytes = await pdfDoc.save();
