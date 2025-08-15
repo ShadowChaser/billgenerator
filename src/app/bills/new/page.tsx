@@ -831,8 +831,12 @@ export default function NewBillPage() {
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([baseWidth, pageHeight]);
 
-    const fontRegular = await pdfDoc.embedStandardFont(StandardFonts.TimesRoman);
-    const fontBold = await pdfDoc.embedStandardFont(StandardFonts.TimesRomanBold);
+    const fontRegular = await pdfDoc.embedStandardFont(
+      StandardFonts.TimesRoman
+    );
+    const fontBold = await pdfDoc.embedStandardFont(
+      StandardFonts.TimesRomanBold
+    );
 
     // Helpers for drawing from top-left coordinate system
     const drawText = (
@@ -840,12 +844,22 @@ export default function NewBillPage() {
       x: number,
       yTop: number,
       size: number,
-      opts?: { bold?: boolean; underline?: boolean; color?: ReturnType<typeof rgb> }
+      opts?: {
+        bold?: boolean;
+        underline?: boolean;
+        color?: ReturnType<typeof rgb>;
+      }
     ) => {
       const font = opts?.bold ? fontBold : fontRegular;
       const ascent = font.sizeAtHeight(size);
       const y = pageHeight - (yTop + ascent);
-      page.drawText(text, { x, y, size, font, color: opts?.color ?? rgb(0, 0, 0) });
+      page.drawText(text, {
+        x,
+        y,
+        size,
+        font,
+        color: opts?.color ?? rgb(0, 0, 0),
+      });
       if (opts?.underline) {
         const width = font.widthOfTextAtSize(text, size);
         const underlineY = y - 2;
@@ -887,7 +901,13 @@ export default function NewBillPage() {
     };
 
     // Page background
-    page.drawRectangle({ x: 0, y: 0, width: baseWidth, height: pageHeight, color: rgb(1, 1, 1) });
+    page.drawRectangle({
+      x: 0,
+      y: 0,
+      width: baseWidth,
+      height: pageHeight,
+      color: rgb(1, 1, 1),
+    });
 
     // Layout paddings to match preview wrapper: padding: 24px 20px 180px 20px
     const padTop = 24;
@@ -897,11 +917,17 @@ export default function NewBillPage() {
 
     // Read current form values
     const values = form.getValues();
-    const periodValue: string = values.period || buildPeriodFromDate(new Date());
+    const periodValue: string =
+      values.period || buildPeriodFromDate(new Date());
     const periodDisplay = monthInputToDisplay(periodValue);
-    const billNo: string = values.bill_number || `BILL-${uuidv4().slice(0, 8).toUpperCase()}`;
-    const billDateDisplay = values.date ? format(new Date(values.date), "dd-MM-yyyy") : format(new Date(), "dd-MM-yyyy");
-    const agreementDisplay = values.agreement_date ? format(new Date(values.agreement_date), "do MMMM yyyy") : format(new Date(), "do MMMM yyyy");
+    const billNo: string =
+      values.bill_number || `BILL-${uuidv4().slice(0, 8).toUpperCase()}`;
+    const billDateDisplay = values.date
+      ? format(new Date(values.date), "dd-MM-yyyy")
+      : format(new Date(), "dd-MM-yyyy");
+    const agreementDisplay = values.agreement_date
+      ? format(new Date(values.agreement_date), "do MMMM yyyy")
+      : format(new Date(), "do MMMM yyyy");
     const landlordName = (() => {
       if (values.landlord_mode === "existing" && values.landlord_id) {
         const existing = landlords.find((l) => l.id === values.landlord_id);
@@ -911,17 +937,26 @@ export default function NewBillPage() {
     })();
     const amountNum = Number(values.amount || 0);
     const rateNum = values.rate ? Number(values.rate) : amountNum;
-    const amountFormatted = amountNum.toLocaleString("en-IN", { maximumFractionDigits: 0 });
-    const rateFormatted = rateNum.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+    const amountFormatted = amountNum.toLocaleString("en-IN", {
+      maximumFractionDigits: 0,
+    });
+    const rateFormatted = rateNum.toLocaleString("en-IN", {
+      maximumFractionDigits: 0,
+    });
 
     // Title
-    drawCenteredText("HOUSE RENT BILL", padTop, 18, { bold: true, underline: true });
+    drawCenteredText("HOUSE RENT BILL", padTop, 18, {
+      bold: true,
+      underline: true,
+    });
 
     // Period and bill details block
     let cursorY = padTop + 20 + 18; // title size ~18 plus spacing
     const blockGap = 20;
     cursorY += blockGap;
-    drawText(`PERIOD OF BILL: ${periodDisplay}`, padLeft, cursorY, 12, { bold: true });
+    drawText(`PERIOD OF BILL: ${periodDisplay}`, padLeft, cursorY, 12, {
+      bold: true,
+    });
 
     cursorY += 22;
     const detailsMaxW = baseWidth - padLeft - padRight - 0;
@@ -946,7 +981,10 @@ export default function NewBillPage() {
     const font = fontRegular;
     for (const w of words) {
       const test = line ? line + " " + w : w;
-      if (font.widthOfTextAtSize(test, 12) <= maxTextWidth || line.length === 0) {
+      if (
+        font.widthOfTextAtSize(test, 12) <= maxTextWidth ||
+        line.length === 0
+      ) {
         line = test;
       } else {
         drawText(line, padLeft, cursorY, 12);
@@ -977,59 +1015,161 @@ export default function NewBillPage() {
     // Bottom border of header
     page.drawLine({
       start: { x: tableX, y: pageHeight - (tableYTop + headerHeight) },
-      end: { x: tableX + tableWidth, y: pageHeight - (tableYTop + headerHeight) },
+      end: {
+        x: tableX + tableWidth,
+        y: pageHeight - (tableYTop + headerHeight),
+      },
       color: rgb(0, 0, 0),
       thickness: 1,
     });
-    drawTableCellText("Description", tableX + cellPadX, tableYTop + rowPadY, headerSize, col1W - cellPadX * 2, "left");
-    drawTableCellText("Month", tableX + col1W + cellPadX, tableYTop + rowPadY, headerSize, col2W - cellPadX * 2, "center");
-    drawTableCellText("Rate", tableX + col1W + col2W + cellPadX, tableYTop + rowPadY, headerSize, col3W - cellPadX * 2, "center");
-    drawTableCellText("Amount", tableX + col1W + col2W + col3W + cellPadX, tableYTop + rowPadY, headerSize, col4W - cellPadX * 2, "center");
+    drawTableCellText(
+      "Description",
+      tableX + cellPadX,
+      tableYTop + rowPadY,
+      headerSize,
+      col1W - cellPadX * 2,
+      "left"
+    );
+    drawTableCellText(
+      "Month",
+      tableX + col1W + cellPadX,
+      tableYTop + rowPadY,
+      headerSize,
+      col2W - cellPadX * 2,
+      "center"
+    );
+    drawTableCellText(
+      "Rate",
+      tableX + col1W + col2W + cellPadX,
+      tableYTop + rowPadY,
+      headerSize,
+      col3W - cellPadX * 2,
+      "center"
+    );
+    drawTableCellText(
+      "Amount",
+      tableX + col1W + col2W + col3W + cellPadX,
+      tableYTop + rowPadY,
+      headerSize,
+      col4W - cellPadX * 2,
+      "center"
+    );
 
     // Data row
     const dataY = tableYTop + headerHeight + 10;
     const dataSize = 12;
     const dataHeight = dataSize + rowPadY + 10;
-    drawTableCellText("HOUSE RENT", tableX + cellPadX, dataY, dataSize, col1W - cellPadX * 2, "left");
-    drawTableCellText(periodDisplay, tableX + col1W + cellPadX, dataY, dataSize, col2W - cellPadX * 2, "center");
-    drawTableCellText(`Rs.${rateFormatted}/- P.M`, tableX + col1W + col2W + cellPadX, dataY, dataSize, col3W - cellPadX * 2, "center");
-    drawTableCellText(`Rs.${amountFormatted}/-`, tableX + col1W + col2W + col3W + cellPadX, dataY, dataSize, col4W - cellPadX * 2, "center");
+    drawTableCellText(
+      "HOUSE RENT",
+      tableX + cellPadX,
+      dataY,
+      dataSize,
+      col1W - cellPadX * 2,
+      "left"
+    );
+    drawTableCellText(
+      periodDisplay,
+      tableX + col1W + cellPadX,
+      dataY,
+      dataSize,
+      col2W - cellPadX * 2,
+      "center"
+    );
+    drawTableCellText(
+      `Rs.${rateFormatted}/- P.M`,
+      tableX + col1W + col2W + cellPadX,
+      dataY,
+      dataSize,
+      col3W - cellPadX * 2,
+      "center"
+    );
+    drawTableCellText(
+      `Rs.${amountFormatted}/-`,
+      tableX + col1W + col2W + col3W + cellPadX,
+      dataY,
+      dataSize,
+      col4W - cellPadX * 2,
+      "center"
+    );
 
     // Outer table rectangle and internal column dividers (2-row table: header line already drawn)
     const tableHeight = headerHeight + dataHeight;
     const tableBottomY = tableYTop + tableHeight;
     // Outline
-    page.drawRectangle({ x: tableX, y: pageHeight - tableBottomY, width: tableWidth, height: tableHeight, borderColor: rgb(0, 0, 0), borderWidth: 1 });
+    page.drawRectangle({
+      x: tableX,
+      y: pageHeight - tableBottomY,
+      width: tableWidth,
+      height: tableHeight,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 1,
+    });
     // Column dividers
     const dividerY1 = pageHeight - tableYTop;
     const dividerY2 = pageHeight - tableBottomY;
     const x1 = tableX + col1W;
     const x2 = x1 + col2W;
     const x3 = x2 + col3W;
-    page.drawLine({ start: { x: x1, y: dividerY2 }, end: { x: x1, y: dividerY1 }, color: rgb(0, 0, 0), thickness: 1 });
-    page.drawLine({ start: { x: x2, y: dividerY2 }, end: { x: x2, y: dividerY1 }, color: rgb(0, 0, 0), thickness: 1 });
-    page.drawLine({ start: { x: x3, y: dividerY2 }, end: { x: x3, y: dividerY1 }, color: rgb(0, 0, 0), thickness: 1 });
+    page.drawLine({
+      start: { x: x1, y: dividerY2 },
+      end: { x: x1, y: dividerY1 },
+      color: rgb(0, 0, 0),
+      thickness: 1,
+    });
+    page.drawLine({
+      start: { x: x2, y: dividerY2 },
+      end: { x: x2, y: dividerY1 },
+      color: rgb(0, 0, 0),
+      thickness: 1,
+    });
+    page.drawLine({
+      start: { x: x3, y: dividerY2 },
+      end: { x: x3, y: dividerY1 },
+      color: rgb(0, 0, 0),
+      thickness: 1,
+    });
 
     // Signature block at bottom-right
     const sigBlockBottom = padBottom - 20; // keep some spacing from page bottom padding
     const sigBlockRight = padRight;
-    const sigImgMaxW = 140; // further smaller to reduce blur
-    const sigImgMaxH = 50;  // further smaller height
+    const sigImgMaxW = 92; // smaller to match preview and reduce blur
+    const sigImgMaxH = 32; // smaller height
     let sigYTop = pageHeight - sigBlockBottom - sigImgMaxH; // approximate top position for image
     let signatureUrl: string | null = values.signature_url || null;
-    if (!signatureUrl && values.landlord_mode === "existing" && values.landlord_id) {
+    if (
+      !signatureUrl &&
+      values.landlord_mode === "existing" &&
+      values.landlord_id
+    ) {
       const existing = landlords.find((l) => l.id === values.landlord_id);
       if (existing?.signature_url) signatureUrl = existing.signature_url;
     }
-    if (signatureUrl && typeof signatureUrl === "string" && signatureUrl.startsWith("data:image/")) {
+    if (
+      signatureUrl &&
+      typeof signatureUrl === "string" &&
+      signatureUrl.startsWith("data:image/")
+    ) {
       try {
         const isPng = signatureUrl.startsWith("data:image/png");
-        const bin = Uint8Array.from(atob(signatureUrl.split(",")[1] || ""), (c) => c.charCodeAt(0));
-        const img = isPng ? await pdfDoc.embedPng(bin) : await pdfDoc.embedJpg(bin);
-        const scale = Math.min(sigImgMaxW / img.width, sigImgMaxH / img.height);
+        const bin = Uint8Array.from(
+          atob(signatureUrl.split(",")[1] || ""),
+          (c) => c.charCodeAt(0)
+        );
+        const img = isPng
+          ? await pdfDoc.embedPng(bin)
+          : await pdfDoc.embedJpg(bin);
+        // Do not upscale; only downscale to avoid blur
+        const scale = Math.min(
+          1,
+          sigImgMaxW / img.width,
+          sigImgMaxH / img.height
+        );
         const dw = img.width * scale;
         const dh = img.height * scale;
-        const dx = baseWidth - sigBlockRight - dw;
+        // Center image over the signature label box (200px wide)
+        const boxWidth = 200;
+        const boxLeft = baseWidth - sigBlockRight - boxWidth;
+        const dx = boxLeft + (boxWidth - dw) / 2;
         // Anchor the image just above the first signature label with a small gap
         const label1Top = pageHeight - padBottom + 40; // yTop used for first label
         const gap = 6; // tighter distance between image bottom and label top
@@ -1369,8 +1509,6 @@ export default function NewBillPage() {
     URL.revokeObjectURL(url);
   }
 
-  
-
   return (
     <div className="grid gap-6 max-w-5xl mx-auto px-3 sm:px-4 pt-6 sm:pt-8 pb-10 sm:pb-12 overflow-x-hidden min-w-0">
       <h1 className="text-2xl font-semibold">House Rent Bill</h1>
@@ -1506,9 +1644,10 @@ export default function NewBillPage() {
                             reader.readAsDataURL(file);
                             // Clean up this promise when done
                             p.finally(() => {
-                              pendingReadsRef.current = pendingReadsRef.current.filter(
-                                (it) => it !== p
-                              );
+                              pendingReadsRef.current =
+                                pendingReadsRef.current.filter(
+                                  (it) => it !== p
+                                );
                             });
                           }}
                         />
