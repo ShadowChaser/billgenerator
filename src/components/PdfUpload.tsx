@@ -111,6 +111,22 @@ export default function PdfUpload({
     return fullText;
   };
 
+  // Extract text from .docx using mammoth (runs in the browser)
+  const extractTextFromDocx = async (file: File): Promise<string> => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      // Dynamic import of the browser build
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore - we add a module declaration for this path
+      const mammoth = (await import("mammoth/mammoth.browser")) as any;
+      const { value } = await (mammoth as any).extractRawText({ arrayBuffer });
+      return typeof value === "string" ? value : "";
+    } catch (err) {
+      console.error("Error in DOCX extraction:", err);
+      throw err;
+    }
+  };
+
   const generateNextMonthFields = (
     lastFields: Partial<BillFormInput>
   ): Partial<BillFormInput> => {
@@ -276,61 +292,186 @@ export default function PdfUpload({
       if (extractedFields.date) break;
     }
 
-    // Extract period - look for month names and years
-    const monthNames = [
-      "january",
-      "february",
-      "march",
-      "april",
-      "may",
-      "june",
-      "july",
-      "august",
-      "september",
-      "october",
-      "november",
-      "december",
+    // Extract period (YYYY-MM) - context aware and format flexible
+    const periodKeywords = [
+      "period", "billing period", "for the month", "rent for", "for month", "for the period", "bill for", "month of"
     ];
+    const monthMapShort: Record<string, string> = {
+      jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
+      jul: "07", aug: "08", sep: "09", sept: "09", oct: "10", nov: "11", dec: "12",
+    };
+    const monthMapLong: Record<string, string> = {
+      january: "01", february: "02", march: "03", april: "04", may: "05", june: "06",
+      july: "07", august: "08", september: "09", october: "10", november: "11", december: "12",
+    };
+    const toFullYear = (yy: string): string => {
+      if (yy.length === 4) return yy;
+      const n = parseInt(yy, 10);
+      // Heuristic: 00..69 => 2000..2069, 70..99 => 1970..1999
+      return (n >= 70 ? 1900 + n : 2000 + n).toString();
+    };
+    const normPeriod = (y: string, m: string): string | null => {
+      const year = toFullYear(y);
+      const month = String(parseInt(m, 10)).padStart(2, "0");
+      const test = `${year}-${month}-01`;
+      return isNaN(Date.parse(test)) ? null : `${year}-${month}`;
+    };
+    const findPeriodInSnippet = (snippet: string): string | null => {
+      // 1) Ranges like 01/07/2024 to 31/07/2024 or 2024-07-01 - 2024-07-31
+      let m = snippet.match(/(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}).{0,10}(?:to|-|–|—).{0,10}(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i);
+      if (m) {
+        // Use first date's month/year
+        const first = m[1];
+        let mm = first.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})$/);
+        if (mm) {
+          const y = toFullYear(mm[3]);
+          return normPeriod(y, mm[2]);
+        }
+      }
+      // 2) MM/YYYY or MM-YYYY
+      m = snippet.match(/\b(\d{1,2})[-\/]?(\s)?(\d{2,4})\b/);
+      if (m && parseInt(m[1], 10) >= 1 && parseInt(m[1], 10) <= 12) {
+        const y = toFullYear(m[3]);
+        return normPeriod(y, m[1]);
+      }
+      // 3) YYYY-MM
+      m = snippet.match(/\b(\d{4})[-\/](\d{1,2})\b/);
+      if (m) {
+        return normPeriod(m[1], m[2]);
+      }
+      // 4) MonthName -? YYYY (allow optional hyphen/space variations)
+      m = snippet.match(/\b([A-Za-z]{3,9})\.?\s*-?\s*(\d{2,4})\b/);
+      if (m) {
+        const monKey = m[1].toLowerCase();
+        const mon = monthMapLong[monKey] || monthMapShort[monKey];
+        if (mon) {
+          const y = toFullYear(m[2]);
+          return normPeriod(y, mon);
+        }
+      }
+      // 5) YYYY MonthName
+      m = snippet.match(/\b(\d{4})\s+([A-Za-z]{3,9})\b/);
+      if (m) {
+        const monKey = m[2].toLowerCase();
+        const mon = monthMapLong[monKey] || monthMapShort[monKey];
+        if (mon) return normPeriod(m[1], mon);
+      }
+      return null;
+    };
 
-    for (let i = 0; i < monthNames.length; i++) {
-      const monthName = monthNames[i];
-      const monthPattern = new RegExp(`${monthName}\\s*-?\\s*(\\d{4})`, "i");
-      const match = text.match(monthPattern);
-      console.log(
-        "Trying period pattern:",
-        monthPattern.source,
-        "Match:",
-        match
-      );
-      if (match && match[1]) {
-        const year = match[1];
-        const month = String(i + 1).padStart(2, "0");
-        extractedFields.period = `${year}-${month}`;
-        console.log("Found period:", extractedFields.period);
-        break;
+    const lowerText = text.toLowerCase();
+    let bestPeriod: string | null = null;
+    for (const kw of periodKeywords) {
+      let idxStart = 0;
+      while (true) {
+        const at = lowerText.indexOf(kw, idxStart);
+        if (at === -1) break;
+        const snippet = text.substring(Math.max(0, at - 50), Math.min(text.length, at + 150));
+        const found = findPeriodInSnippet(snippet);
+        if (found) { bestPeriod = found; break; }
+        idxStart = at + kw.length;
+      }
+      if (bestPeriod) break;
+    }
+
+    // Fallback: scan entire text and pick the most recent-looking month
+    if (!bestPeriod) {
+      const candidates: string[] = [];
+      const push = (p: string | null) => { if (p) candidates.push(p); };
+      // Scan chunks to avoid over-matching
+      const chunks = text.split(/\n|\r|\t/).slice(0, 500);
+      for (const c of chunks) {
+        push(findPeriodInSnippet(c));
+      }
+      if (candidates.length > 0) {
+        // Choose the latest by date
+        candidates.sort((a, b) => Date.parse(a + "-01") - Date.parse(b + "-01"));
+        bestPeriod = candidates[candidates.length - 1];
       }
     }
 
-    // Extract agreement date
-    const agreementPatterns = [
-      /agreement\s*date[:\s]*(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/i,
-      /agreement\s*dtd[:\s]*(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/i,
-      /dtd[:\s]*(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/i,
-    ];
+    if (bestPeriod) {
+      extractedFields.period = bestPeriod;
+      console.log("Found period:", bestPeriod);
+    }
 
-    for (const pattern of agreementPatterns) {
-      const match = text.match(pattern);
-      if (match && match[1] && match[2] && match[3]) {
-        const day = match[1].padStart(2, "0");
-        const month = match[2].padStart(2, "0");
-        const year = match[3];
-        const dateStr = `${year}-${month}-${day}`;
-        if (!isNaN(Date.parse(dateStr))) {
-          extractedFields.agreement_date = dateStr;
-          console.log("Found agreement date:", dateStr);
-          break;
+    // Extract agreement date (robust): prefer date near 'agreement' or 'dtd'
+    const agreementKeywords = ["agreement", "agr", "dtd", "dated", "agreement date", "agreement dtd"]; 
+    const lower = text.toLowerCase();
+    let bestAgreementDate: string | null = null;
+
+    // Helper to normalize numeric dates to YYYY-MM-DD
+    const normalizeYMD = (y: string, m: string, d: string) => {
+      const mm = m.padStart(2, "0");
+      const dd = d.padStart(2, "0");
+      const dateStr = `${y}-${mm}-${dd}`;
+      return isNaN(Date.parse(dateStr)) ? null : dateStr;
+    };
+
+    // Helper to try parse common patterns from a snippet
+    const tryExtractDateFromSnippet = (snippet: string): string | null => {
+      // 1) DD[-/]MM[-/]YYYY
+      let m = snippet.match(/\b(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})\b/);
+      if (m) {
+        return normalizeYMD(m[3], m[2], m[1]);
+      }
+      // 2) YYYY[-/]MM[-/]DD
+      m = snippet.match(/\b(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})\b/);
+      if (m) {
+        return normalizeYMD(m[1], m[2], m[3]);
+      }
+      // 3) D{1,2} Month YYYY (month words)
+      const monthMap: Record<string, string> = {
+        jan: "01", january: "01",
+        feb: "02", february: "02",
+        mar: "03", march: "03",
+        apr: "04", april: "04",
+        may: "05",
+        jun: "06", june: "06",
+        jul: "07", july: "07",
+        aug: "08", august: "08",
+        sep: "09", sept: "09", september: "09",
+        oct: "10", october: "10",
+        nov: "11", november: "11",
+        dec: "12", december: "12",
+      };
+      m = snippet.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,9})\.?\s+(\d{4})\b/);
+      if (m) {
+        const dd = m[1].padStart(2, "0");
+        const mon = monthMap[m[2].toLowerCase()];
+        if (mon) {
+          return normalizeYMD(m[3], mon, dd);
         }
       }
+      return null;
+    };
+
+    // Search near keywords first
+    for (const kw of agreementKeywords) {
+      let startIndex = 0;
+      while (true) {
+        const idx = lower.indexOf(kw, startIndex);
+        if (idx === -1) break;
+        // Look in a window around the keyword
+        const snippet = text.substring(Math.max(0, idx - 30), Math.min(text.length, idx + 80));
+        const found = tryExtractDateFromSnippet(snippet);
+        if (found) {
+          bestAgreementDate = found;
+          break;
+        }
+        startIndex = idx + kw.length;
+      }
+      if (bestAgreementDate) break;
+    }
+
+    // Fallback: scan the whole text for the first reasonable date if none found by keyword
+    if (!bestAgreementDate) {
+      bestAgreementDate = tryExtractDateFromSnippet(text);
+    }
+
+    if (bestAgreementDate) {
+      extractedFields.agreement_date = bestAgreementDate;
+      console.log("Found agreement date:", bestAgreementDate);
     }
 
     return extractedFields;
@@ -342,8 +483,13 @@ export default function PdfUpload({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.includes("pdf")) {
-      setError("Please select a PDF file");
+    const name = file.name.toLowerCase();
+    const isPdf = name.endsWith(".pdf") || file.type.includes("pdf");
+    const isDocx = name.endsWith(".docx") || file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    const isDoc = name.endsWith(".doc");
+
+    if (!isPdf && !isDocx) {
+      setError("Please select a PDF or DOCX file (.pdf, .docx). Legacy .doc is not supported in-browser.");
       return;
     }
 
@@ -352,7 +498,18 @@ export default function PdfUpload({
     setSuccess(null);
 
     try {
-      const text = await extractTextFromPdf(file);
+      const text = isPdf
+        ? await extractTextFromPdf(file)
+        : isDocx
+        ? await extractTextFromDocx(file)
+        : (() => {
+            if (isDoc) {
+              throw new Error(
+                "Legacy .doc files are not supported in the browser. Please convert to .docx or PDF."
+              );
+            }
+            throw new Error("Unsupported file type.");
+          })();
       console.log(
         "Extracted text from PDF (length:",
         text.length,
@@ -409,7 +566,7 @@ export default function PdfUpload({
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf"
+          accept=".pdf,.docx"
           onChange={handleFileUpload}
           disabled={disabled || isProcessing}
           className="border rounded px-3 py-2 bg-transparent disabled:opacity-50"

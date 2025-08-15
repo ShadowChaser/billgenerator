@@ -152,7 +152,7 @@ export default function NewBillPage() {
       );
       const periodDisplay = monthInputToDisplay(values.period);
       const html = `
-        <div style="position:relative; font-family:'Times New Roman', Times, serif; color:#000; width:794px; height:1123px; margin:0 auto; padding:24px 36px; background:#ffffff;">
+        <div style="position:relative; font-family:'Times New Roman', Times, serif; color:#000; width:794px; min-height:1123px; margin:0 auto; padding:24px 36px 180px 36px; background:#ffffff; box-sizing:border-box; overflow:visible;">
           <div style="text-align:center; font-weight:700; font-size:18pt; text-decoration: underline;">HOUSE RENT BILL</div>
 
           <div style="margin-top:20px; font-size:12pt;">
@@ -190,7 +190,7 @@ export default function NewBillPage() {
             </tbody>
           </table>
 
-          <div style="position:absolute; right:36px; bottom:90px; text-align:right;">
+          <div style="position:absolute; right:36px; bottom:48px; text-align:right;">
             ${
               signatureUrl
                 ? `<img src="${signatureUrl}" alt="Signature" style="width:180px; height:auto; display:block; margin:0 0 8px auto;">`
@@ -224,16 +224,17 @@ export default function NewBillPage() {
     await html2pdf()
       .from(element)
       .set({
-        margin: 10,
+        margin: 0,
         filename: `house-rent-bill-${Date.now()}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale, useCORS: true, scrollX: 0, scrollY: 0 },
+        html2canvas: { scale, useCORS: true, scrollX: 0, scrollY: 0, backgroundColor: "#ffffff" },
         jsPDF: {
           unit: "mm",
           format: "a4",
           orientation: "portrait",
           compress: true,
         },
+        pagebreak: { mode: ["css", "avoid-all"] },
       })
       .save();
     element.remove();
