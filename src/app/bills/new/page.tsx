@@ -287,11 +287,11 @@ export default function NewBillPage() {
   }
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-6 max-w-5xl mx-auto px-4 pt-6 sm:pt-8">
       <h1 className="text-2xl font-semibold">House Rent Bill</h1>
 
       <form
-        className="grid gap-6 max-w-3xl"
+        className="grid gap-6 w-full max-w-3xl mx-auto"
         onSubmit={form.handleSubmit(onSubmit)}
       >
         <PdfUpload
@@ -511,7 +511,7 @@ export default function NewBillPage() {
       </form>
 
       {previewHtml && (
-        <div className="mt-6 border rounded p-2 sm:p-4 responsive-pane">
+        <div className="mt-6 border rounded p-2 sm:p-4 responsive-pane w-full max-w-3xl mx-auto">
           <div className="text-sm font-semibold mb-2">Preview</div>
           <div ref={previewContainerRef} className="w-full overflow-auto">
             {/* Reserve scaled space to prevent clipping */}
