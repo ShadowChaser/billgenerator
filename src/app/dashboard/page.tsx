@@ -26,7 +26,7 @@ export default function DashboardPage() {
 
   const quickActions = [
     {
-      title: "House Rent Bill",
+      title: "BillMate",
       description: "Generate a new bill for your tenant",
       href: "/bills/new",
       icon: "📄",
@@ -62,7 +62,7 @@ export default function DashboardPage() {
   const recentActivity = [
     {
       action: "New bill created",
-      detail: "House Rent Bill #25",
+      detail: "BillMate #25",
       time: "2 hours ago",
       type: "bill",
     },
@@ -96,8 +96,8 @@ export default function DashboardPage() {
               Welcome back! 👋
             </h1>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Manage your house rent bills efficiently with our advanced tools
-              and automated generation system.
+              Manage your bills efficiently with our advanced tools and
+              automated generation system.
             </p>
           </div>
         </div>
@@ -249,7 +249,7 @@ export default function DashboardPage() {
                 </h4>
                 <p className="text-sm text-blue-800 dark:text-blue-200">
                   Create bills manually using the built-in template. Go to{" "}
-                  <span className="font-semibold">House Rent Bill</span>, fill
+                  <span className="font-semibold">BillMate</span>, fill
                   the required fields, preview, and download the PDF.
                 </p>
               </div>

@@ -94,7 +94,10 @@ export default function NewBillPage() {
       if (!el) return;
       const rect = el.getBoundingClientRect();
       const scaledHeight = rect.height; // current scaled height
-      const computedBase = Math.max(1123, Math.round(scaledHeight / Math.max(previewScale, 0.001)));
+      const computedBase = Math.max(
+        1123,
+        Math.round(scaledHeight / Math.max(previewScale, 0.001))
+      );
       setBaseHeight(computedBase);
     };
     // Allow DOM to paint before measuring
@@ -264,7 +267,13 @@ export default function NewBillPage() {
         margin: 0,
         filename: `house-rent-bill-${Date.now()}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale, useCORS: true, scrollX: 0, scrollY: 0, backgroundColor: "#ffffff" },
+        html2canvas: {
+          scale,
+          useCORS: true,
+          scrollX: 0,
+          scrollY: 0,
+          backgroundColor: "#ffffff",
+        },
         jsPDF: {
           unit: "mm",
           format: "a4",

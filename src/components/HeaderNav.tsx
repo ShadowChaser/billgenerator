@@ -8,7 +8,7 @@ export default function HeaderNav() {
     <header className="border-b border-black/10 dark:border-white/10">
       <div className="max-w-5xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-3">
         <Link href="/" className="font-semibold text-base sm:text-lg">
-          House Rent Bill
+          BillMate
         </Link>
 
         {/* Mobile hamburger */}
@@ -31,7 +31,7 @@ export default function HeaderNav() {
           className={`${open ? "flex" : "hidden"} w-full flex-col gap-2 mt-3 sm:mt-0 sm:w-auto sm:flex sm:flex-row sm:items-center sm:gap-3`}
         >
           <Link href="/dashboard">Dashboard</Link>
-          <Link href="/bills/new">House Rent Bill</Link>
+          <Link href="/bills/new">House Bill</Link>
           <Link href="/bills/advanced">Advanced Generator</Link>
           <Link href="/bills">Bills</Link>
           <Link href="/landlords">Landlords</Link>

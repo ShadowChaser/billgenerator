@@ -6,7 +6,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <header className="border-b border-black/10 dark:border-white/10">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="font-semibold">
-            House Rent Bill
+            BillMate
           </Link>
           <nav className="flex gap-4 text-sm">
             <Link href="/dashboard">Dashboard</Link>
