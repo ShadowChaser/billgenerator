@@ -308,14 +308,14 @@ export default function CustomTemplateBillPage() {
       const key = f.id;
       const val = formValues[key] ?? "";
       const commonLabel = (
-        <span className="text-xs opacity-80">{f.label || key}{f.required ? " *" : ""}</span>
+        <span className="text-sm md:text-xs opacity-80">{f.label || key}{f.required ? " *" : ""}</span>
       );
       if (f.type === "textarea") {
         return (
           <label key={key} className="grid gap-1">
             {commonLabel}
             <textarea
-              className="ring-1 ring-inset rounded px-2 py-1.5 bg-transparent min-h-[80px]"
+              className="ring-1 ring-inset rounded px-3 py-2 md:px-3 md:py-2 bg-transparent min-h-[80px]"
               value={val}
               onChange={(e) => onChangeField(f, e.target.value)}
               placeholder={f.placeholder}
@@ -328,7 +328,7 @@ export default function CustomTemplateBillPage() {
           <label key={key} className="grid gap-1">
             {commonLabel}
             <select
-              className="ring-1 ring-inset rounded px-2 py-1.5 bg-transparent"
+              className="ring-1 ring-inset rounded px-3 py-2 md:px-3 md:py-2 bg-transparent"
               value={val}
               onChange={(e) => onChangeField(f, e.target.value)}
             >
@@ -347,7 +347,7 @@ export default function CustomTemplateBillPage() {
             <input
               type="file"
               accept="image/*"
-              className="ring-1 ring-inset rounded px-2 py-1.5 bg-transparent"
+              className="ring-1 ring-inset rounded px-3 py-2 md:px-3 md:py-2 bg-transparent"
               onChange={(e) => onChangeField(f, e.target.files?.[0] ?? null)}
             />
             {val ? <span className="text-xs opacity-70">Image selected</span> : null}
@@ -360,7 +360,7 @@ export default function CustomTemplateBillPage() {
           {commonLabel}
           <input
             type={inputType}
-            className="ring-1 ring-inset rounded px-2 py-1.5 bg-transparent"
+            className="ring-1 ring-inset rounded px-3 py-2 md:px-3 md:py-2 bg-transparent"
             value={val}
             onChange={(e) => onChangeField(f, e.target.value)}
             placeholder={f.placeholder}
@@ -423,7 +423,7 @@ export default function CustomTemplateBillPage() {
                 ) : null}
               </CardHeader>
               <CardContent>
-                <form className="grid gap-3 md:gap-4 max-h-[70vh] overflow-y-auto pr-1 scrollbar-white">
+                <form className="grid gap-3 md:gap-4 md:max-h-[72vh] overflow-y-auto md:pr-1 scrollbar-white">
                   {fieldControls}
                 </form>
               </CardContent>
@@ -437,7 +437,7 @@ export default function CustomTemplateBillPage() {
                   <CardDescription>Live preview of your bill</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div ref={previewContainerRef} className="w-full overflow-auto rounded-md bg-white dark:bg-gray-900 flex items-center justify-center p-2 md:p-3">
+                  <div ref={previewContainerRef} className="w-full overflow-auto rounded-md bg-white dark:bg-gray-900 flex items-center justify-center p-2 sm:p-3">
                     <canvas ref={canvasRef} />
                   </div>
                 </CardContent>
