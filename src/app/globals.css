@@ -26,6 +26,18 @@ body {
   margin: 0; /* prevent default 8px margin that can cause scroll */
 }
 
+/* Prevent horizontal scrollbar on small screens */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Media safety: avoid oversized media pushing layout */
+img, video, canvas, svg {
+  max-width: 100%;
+  height: auto;
+}
+
 /* Mobile helpers for preview/table spillover */
 .responsive-pane {
   overflow-x: auto;
