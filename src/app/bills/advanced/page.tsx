@@ -7,6 +7,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -77,10 +78,12 @@ interface Template {
 
 const TEMPLATES_KEY = "hrb_templates_v1";
 const LAST_TEMPLATE_KEY = "hrb_last_template_id_v1";
+const CUSTOM_INBOX_KEY = "hrb_custom_inbox_template_v1";
 
 type ResizeHandle = null | "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
 
 export default function AdvancedBillGeneratorPage() {
+  const router = useRouter();
   // Templates state (simple local list)
   const [templates, setTemplates] = useState<Template[]>(() => {
     const sampleTemplate: Template = {
@@ -781,6 +784,31 @@ export default function AdvancedBillGeneratorPage() {
     );
     setSelectedField(null);
   }, [redoStack, currentTemplate]);
+
+  // Helper: export current template to JSON file
+  const exportTemplateJson = useCallback((tpl: Template) => {
+    try {
+      const serializable = {
+        ...tpl,
+        createdAt:
+          (tpl as any).createdAt instanceof Date
+            ? (tpl as any).createdAt.toISOString()
+            : (tpl as any).createdAt,
+      } as any;
+      const blob = new Blob([JSON.stringify(serializable, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${tpl.name || "template"}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      // eslint-disable-next-line no-alert
+      alert("Failed to export template JSON");
+    }
+  }, []);
 
   // Keyboard event handler
   useEffect(() => {
@@ -2476,6 +2504,35 @@ export default function AdvancedBillGeneratorPage() {
                       onClick={exportCurrentCanvasToPdf}
                     >
                       🖨️ Export PDF
+                    </Button>
+                    <Button
+                      className="w-full sm:w-auto"
+                      variant="secondary"
+                      onClick={() => currentTemplate && exportTemplateJson(currentTemplate)}
+                    >
+                      ⬇️ Export JSON
+                    </Button>
+                    <Button
+                      className="w-full sm:w-auto"
+                      variant="success"
+                      onClick={() => {
+                        if (!currentTemplate) return;
+                        try {
+                          const serializable: any = {
+                            ...currentTemplate,
+                            createdAt:
+                              currentTemplate.createdAt instanceof Date
+                                ? currentTemplate.createdAt.toISOString()
+                                : (currentTemplate as any).createdAt,
+                          };
+                          if (typeof window !== "undefined") {
+                            window.localStorage.setItem(CUSTOM_INBOX_KEY, JSON.stringify(serializable));
+                          }
+                          router.push("/bills/custom");
+                        } catch {}
+                      }}
+                    >
+                      🚚 Use in Custom Template
                     </Button>
                     <Button
                       className="w-full sm:w-auto"

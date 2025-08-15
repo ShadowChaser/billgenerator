@@ -43,3 +43,83 @@ img, video, canvas, svg {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+/* Reusable custom scrollbars */
+:root {
+  --sb-track: #eef2f7;        /* light track */
+  --sb-thumb: #cbd5e1;        /* slate-300 */
+  --sb-thumb-hover: #94a3b8;  /* slate-400 */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sb-track: #0f172a;       /* slate-900 */
+    --sb-thumb: #374151;       /* gray-700 */
+    --sb-thumb-hover: #4b5563; /* gray-600 */
+  }
+}
+
+/* Default sized scrollbar */
+.scrollbar {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: var(--sb-thumb) var(--sb-track);
+}
+.scrollbar::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+.scrollbar::-webkit-scrollbar-track {
+  background: var(--sb-track);
+  border-radius: 8px;
+}
+.scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--sb-thumb);
+  border-radius: 8px;
+  border: 3px solid transparent; /* creates padding */
+  background-clip: content-box;
+}
+.scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: var(--sb-thumb-hover);
+}
+
+/* Thinner variant */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  border-width: 2px;
+}
+
+/* Hide scrollbar but keep scrollable */
+.scrollbar-none {
+  scrollbar-width: none; /* Firefox */
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none; /* WebKit */
+}
+
+/* White-only variant (ignores theme) */
+.scrollbar-white {
+  scrollbar-width: thin;
+  scrollbar-color: #ffffff #ffffff; /* thumb track */
+}
+.scrollbar-white::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.scrollbar-white::-webkit-scrollbar-track {
+  background: #ffffff;
+}
+.scrollbar-white::-webkit-scrollbar-thumb {
+  background-color: #ffffff;
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+.scrollbar-white:hover::-webkit-scrollbar-thumb {
+  background-color: #ffffff; /* stay white on hover */
+}

@@ -52,6 +52,9 @@ export default function HeaderNav() {
           <Link href="/bills/advanced" onClick={() => setOpen(false)} className="block py-2.5 sm:py-0">
             Advanced Generator
           </Link>
+          <Link href="/bills/custom" onClick={() => setOpen(false)} className="block py-2.5 sm:py-0">
+            Custom Template
+          </Link>
           <Link href="/bills" onClick={() => setOpen(false)} className="block py-2.5 sm:py-0">
             Bills
           </Link>
