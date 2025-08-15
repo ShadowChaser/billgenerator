@@ -31,7 +31,7 @@ export default function Home() {
       </div>
 
       {/* Hero Section */}
-      <section className="w-full px-4 min-h-[clamp(520px,calc(100svh-4rem-1px),760px)] flex items-center justify-center py-8 sm:py-12">
+      <section className="max-w-6xl mx-auto px-4 min-h-[clamp(520px,calc(100svh-4rem-1px),760px)] flex items-center justify-center py-8 sm:py-12">
         <motion.div
           initial="hidden"
           animate="show"
@@ -83,6 +83,46 @@ export default function Home() {
             </Link>
           </motion.div>
         </motion.div>
+      </section>
+
+      {/* Animated Attraction Banner */}
+      <section className="relative py-6 sm:py-8">
+        <div className="max-w-6xl mx-auto px-4 overflow-hidden">
+          <motion.div
+            className="flex gap-6 w-max"
+            initial={{ x: 0 }}
+            animate={{ x: "-50%" }}
+            transition={{ duration: 20, ease: "linear", repeat: Infinity }}
+            aria-hidden="true"
+          >
+            {[
+              "🚀 Fast PDF Export",
+              "🤖 AI Parsing",
+              "🧾 Pro Templates",
+              "🔒 Secure Storage",
+              "⚡ Instant Preview",
+              "📱 Mobile Ready",
+              "🖋️ E‑Signature",
+            ]
+              .concat([
+                "🚀 Fast PDF Export",
+                "🤖 AI Parsing",
+                "🧾 Pro Templates",
+                "🔒 Secure Storage",
+                "⚡ Instant Preview",
+                "📱 Mobile Ready",
+                "🖋️ E‑Signature",
+              ])
+              .map((text, i) => (
+                <span
+                  key={i}
+                  className="shrink-0 rounded-full border px-4 py-2 text-sm opacity-90 bg-white/50 dark:bg-white/5 backdrop-blur-sm"
+                >
+                  {text}
+                </span>
+              ))}
+          </motion.div>
+        </div>
       </section>
 
       {/* Features Section */}
