@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import jsPDF from "jspdf";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import Link from "next/link";
 
 // Minimal copy of the Advanced template types for runtime use
 // These align with `src/app/bills/advanced/page.tsx`
@@ -52,6 +53,7 @@ interface Template {
   width: number;
   height: number;
   createdAt?: string | Date;
+  background?: string; // optional background image data URL
   fields: TemplateField[];
 }
 
@@ -64,6 +66,7 @@ export default function CustomTemplateBillPage() {
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [loadingTemplate, setLoadingTemplate] = useState(false);
   const [hasInbox, setHasInbox] = useState(false);
+  const [restoredValues, setRestoredValues] = useState(false);
 
   const CUSTOM_INBOX_KEY = "hrb_custom_inbox_template_v1";
 
@@ -86,6 +89,12 @@ export default function CustomTemplateBillPage() {
         }
         setFormValues(init);
         setTemplate(data);
+        try {
+          if (typeof window !== "undefined") {
+            window.localStorage.setItem(CUSTOM_INBOX_KEY, JSON.stringify(data));
+            setHasInbox(true);
+          }
+        } catch {}
       } else {
         alert("Invalid template JSON structure.");
       }
@@ -130,7 +139,8 @@ export default function CustomTemplateBillPage() {
     const el = previewContainerRef.current;
     const compute = (w: number) => {
       const baseH = typeof window !== "undefined" ? window.innerHeight : template.height;
-      const heightFrac = baseH >= 1000 ? 0.88 : baseH >= 800 ? 0.8 : 0.7;
+      // Slightly larger preview height across breakpoints
+      const heightFrac = baseH >= 1000 ? 0.92 : baseH >= 800 ? 0.88 : 0.8;
       const availW = Math.max(240, Math.floor(w));
       const availH = Math.max(240, Math.floor(baseH * heightFrac));
       const scale = Math.min(availW / template.width, availH / template.height, 1);
@@ -155,6 +165,29 @@ export default function CustomTemplateBillPage() {
       };
     }
   }, [template]);
+
+  // Restore saved form values for the current template (by id)
+  useEffect(() => {
+    try {
+      if (!template || typeof window === "undefined") return;
+      const key = `${CUSTOM_INBOX_KEY}:values:${template.id}`;
+      const raw = window.localStorage.getItem(key);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Record<string, string>;
+      setFormValues((prev) => ({ ...prev, ...saved }));
+      setRestoredValues(true);
+      setTimeout(() => setRestoredValues(false), 2000);
+    } catch {}
+  }, [template]);
+
+  // Persist form values on change for the current template
+  useEffect(() => {
+    try {
+      if (!template || typeof window === "undefined") return;
+      const key = `${CUSTOM_INBOX_KEY}:values:${template.id}`;
+      window.localStorage.setItem(key, JSON.stringify(formValues));
+    } catch {}
+  }, [template, formValues]);
 
   // Render the template + values to canvas
   const renderTemplate = useCallback(() => {
@@ -188,26 +221,47 @@ export default function CustomTemplateBillPage() {
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, template.width, template.height);
 
-    // Helper for crisp strokes
+    // Draw template background image first, if present
+    const drawBackground = (cb: () => void) => {
+      const bgSrc = (template as any).background as string | undefined;
+      if (!bgSrc) { cb(); return; }
+      const cacheKey = "__background__";
+      const cached = imageCacheRef.current[cacheKey];
+      const draw = (img: HTMLImageElement) => {
+        try { ctx.drawImage(img, 0, 0, template.width, template.height); } catch {}
+        cb();
+      };
+      if (cached) return draw(cached);
+      const img = new Image();
+      img.onload = () => { imageCacheRef.current[cacheKey] = img; draw(img); };
+      img.onerror = () => cb();
+      img.src = bgSrc;
+    };
+
+    // Helper for crisp strokes and aligned borders
     const px = 1 / (displayScale * dpr);
     const snap = (v: number) => Math.round(v * displayScale * dpr) / (displayScale * dpr);
     const strokeAlignedRect = (x: number, y: number, w: number, h: number, lineWidth: number) => {
       const lw = Math.max(px, lineWidth);
       ctx.lineWidth = lw;
       const offs = lw / 2;
-      ctx.strokeRect(snap(x) + offs, snap(y) + offs, Math.max(px, snap(w) - lw), Math.max(px, snap(h) - lw));
+      ctx.strokeRect(
+        snap(x) + offs,
+        snap(y) + offs,
+        Math.max(px, snap(w) - lw),
+        Math.max(px, snap(h) - lw)
+      );
     };
 
-    for (const field of template.fields) {
-      const value = formValues[field.id] ?? field.value ?? "";
+    const renderFields = () => {
+      for (const field of template.fields) {
+        const value = formValues[field.id] ?? field.value ?? "";
 
       // Background box (skip for images with value)
       const isImg = field.type === "image" || field.type === "signature";
       if (!(isImg && value)) {
         ctx.fillStyle = field.backgroundColor || "#ffffff";
         ctx.fillRect(field.x, field.y, field.width, field.height);
-        ctx.strokeStyle = field.borderColor || "#e5e7eb";
-        strokeAlignedRect(field.x, field.y, field.width, field.height, (field.borderWidth || 1) * 1);
       }
 
       if (isImg) {
@@ -260,7 +314,15 @@ export default function CustomTemplateBillPage() {
 
         renderText(value);
       }
-    }
+      // Always draw a border so fields remain visible on the preview
+      ctx.strokeStyle = field.borderColor || "#d1d5db"; // slightly darker default
+      strokeAlignedRect(field.x, field.y, field.width, field.height, (field.borderWidth || 1) * 1);
+      // end for loop
+      }
+    };
+
+    // Ensure background is rendered before fields
+    drawBackground(renderFields);
   }, [template, formValues, containerSize]);
 
   useEffect(() => {
@@ -385,6 +447,16 @@ export default function CustomTemplateBillPage() {
                 Load from Advanced
               </Button>
             )}
+            {hasInbox && (
+              <Button
+                variant="secondary"
+                className="w-full md:w-auto"
+                onClick={loadFromAdvancedInbox}
+                title="Reload template from Inbox"
+              >
+                Reload from Inbox
+              </Button>
+            )}
             <label className="w-full md:w-auto">
               <span className="inline-flex items-center justify-center px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                 {loadingTemplate ? "Loading..." : "Upload Template JSON"}
@@ -406,6 +478,20 @@ export default function CustomTemplateBillPage() {
           </div>
         </div>
 
+        {/* Always-visible warning/help banner */}
+        <div className="mb-4 rounded-md ring-1 ring-amber-300/70 bg-amber-50 text-amber-900 p-3 shadow-sm dark:bg-amber-950/40 dark:text-amber-200 dark:ring-amber-400/40">
+          <div className="font-semibold text-sm">Heads up</div>
+          <div className="text-xs mt-1">
+            Please add either a <span className="font-medium">proper Template JSON</span> (matching the Custom Template format)
+            or <Link href="/bills/advanced" className="underline">create one from the Advanced Generator</Link> and load it here.
+          </div>
+        </div>
+        {restoredValues && (
+          <div className="mb-3 text-xs rounded-md ring-1 ring-emerald-300/60 bg-emerald-50 text-emerald-900 p-2 dark:bg-emerald-900/30 dark:text-emerald-200 dark:ring-emerald-500/40">
+            Restored your saved field values.
+          </div>
+        )}
+
         {!template ? (
           <Card className="border border-dashed">
             <CardContent className="p-6 text-sm text-gray-600 dark:text-gray-300">
@@ -415,22 +501,34 @@ export default function CustomTemplateBillPage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-start">
             {/* Form Card */}
-            <Card className="border border-gray-200 dark:border-gray-700 lg:col-span-5">
+            <Card className="border border-gray-200 dark:border-gray-700 lg:col-span-4">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base md:text-lg">Fill Fields</CardTitle>
-                {template?.name ? (
-                  <CardDescription className="truncate">{template.name}</CardDescription>
-                ) : null}
+                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  {template?.name ? (
+                    <CardDescription className="truncate">{template.name}</CardDescription>
+                  ) : null}
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    Fields: {template?.fields?.length ?? 0}
+                  </span>
+                </div>
               </CardHeader>
               <CardContent>
-                <form className="grid gap-3 md:gap-4 md:max-h-[72vh] overflow-y-auto md:pr-1 scrollbar-white">
-                  {fieldControls}
+                <form className="grid gap-3 md:gap-4 max-h-[75vh] overflow-y-auto pr-1 scrollbar-white min-h-[200px]">
+                  {template.fields && template.fields.length > 0 ? (
+                    fieldControls
+                  ) : (
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      This template has no editable fields.
+                    </div>
+                  )}
                 </form>
               </CardContent>
             </Card>
 
             {/* Preview Card (sticky) */}
-            <div className="lg:col-span-7 lg:sticky lg:top-6">
+            <div className="lg:col-span-8 lg:sticky lg:top-6">
               <Card className="border border-gray-200 dark:border-gray-700">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base md:text-lg">Preview</CardTitle>
