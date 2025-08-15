@@ -31,7 +31,7 @@ export default function HeaderNav() {
           className={`${open ? "flex" : "hidden"} w-full flex-col gap-2 mt-3 sm:mt-0 sm:w-auto sm:flex sm:flex-row sm:items-center sm:gap-3`}
         >
           <Link href="/dashboard">Dashboard</Link>
-          <Link href="/bills/new">New Bill</Link>
+          <Link href="/bills/new">House Rent Bill</Link>
           <Link href="/bills/advanced">Advanced Generator</Link>
           <Link href="/bills">Bills</Link>
           <Link href="/landlords">Landlords</Link>

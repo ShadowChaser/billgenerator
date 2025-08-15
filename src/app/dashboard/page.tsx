@@ -26,7 +26,7 @@ export default function DashboardPage() {
 
   const quickActions = [
     {
-      title: "Create New Bill",
+      title: "House Rent Bill",
       description: "Generate a new bill for your tenant",
       href: "/bills/new",
       icon: "📄",
@@ -249,7 +249,7 @@ export default function DashboardPage() {
                 </h4>
                 <p className="text-sm text-blue-800 dark:text-blue-200">
                   Create bills manually using the built-in template. Go to{" "}
-                  <span className="font-semibold">Create New Bill</span>, fill
+                  <span className="font-semibold">House Rent Bill</span>, fill
                   the required fields, preview, and download the PDF.
                 </p>
               </div>

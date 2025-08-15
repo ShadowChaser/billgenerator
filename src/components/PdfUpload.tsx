@@ -607,7 +607,7 @@ export default function PdfUpload({
         <div>
           <div className="font-semibold">Important</div>
           <div>
-            Uploads work best with bills generated from this app. Other PDFs/Word/images may not be detected correctly.
+            Uploads work best with bills generated from this page. Other PDFs/Word/images may not be detected correctly.
             If parsing fails or results look wrong, please fill the form manually.
           </div>
         </div>
