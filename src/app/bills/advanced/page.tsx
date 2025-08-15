@@ -64,16 +64,305 @@ type ResizeHandle = null | "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
 export default function AdvancedBillGeneratorPage() {
   // Templates state (simple local list)
   const [templates, setTemplates] = useState<Template[]>(() => {
-    const initial: Template = {
+    const sampleTemplate: Template = {
       id: "tpl-1",
-      name: "Default Template",
-      description: "A starter template",
+      name: "Professional Invoice Template",
+      description: "A complete invoice template with company header, client details, and itemized billing",
       width: 800,
       height: 1120,
       createdAt: new Date(),
-      fields: [],
+      fields: [
+        // Company Header
+        {
+          id: "company-name",
+          label: "Company Name",
+          value: "Your Company Name",
+          type: "text",
+          x: 50,
+          y: 30,
+          width: 300,
+          height: 40,
+          fontSize: 24,
+          isBold: true,
+          isItalic: false,
+          textColor: "#1f2937",
+          backgroundColor: "transparent",
+          borderColor: "transparent",
+          borderWidth: 0,
+          borderRadius: 0,
+          alignment: "left",
+          required: true
+        },
+        {
+          id: "company-address",
+          label: "Company Address",
+          value: "123 Business Street\nCity, State 12345\nPhone: (555) 123-4567\nEmail: info@company.com",
+          type: "textarea",
+          x: 50,
+          y: 80,
+          width: 300,
+          height: 80,
+          fontSize: 12,
+          isBold: false,
+          isItalic: false,
+          textColor: "#6b7280",
+          backgroundColor: "transparent",
+          borderColor: "transparent",
+          borderWidth: 0,
+          borderRadius: 0,
+          alignment: "left",
+          required: false
+        },
+        // Invoice Title
+        {
+          id: "invoice-title",
+          label: "Invoice Title",
+          value: "INVOICE",
+          type: "text",
+          x: 500,
+          y: 30,
+          width: 250,
+          height: 50,
+          fontSize: 32,
+          isBold: true,
+          isItalic: false,
+          textColor: "#dc2626",
+          backgroundColor: "transparent",
+          borderColor: "transparent",
+          borderWidth: 0,
+          borderRadius: 0,
+          alignment: "right",
+          required: true
+        },
+        // Invoice Details
+        {
+          id: "invoice-number",
+          label: "Invoice Number",
+          value: "INV-001",
+          type: "text",
+          x: 500,
+          y: 90,
+          width: 250,
+          height: 30,
+          fontSize: 14,
+          isBold: false,
+          isItalic: false,
+          textColor: "#374151",
+          backgroundColor: "transparent",
+          borderColor: "transparent",
+          borderWidth: 0,
+          borderRadius: 0,
+          alignment: "right",
+          required: true
+        },
+        {
+          id: "invoice-date",
+          label: "Invoice Date",
+          value: new Date().toLocaleDateString(),
+          type: "date",
+          x: 500,
+          y: 130,
+          width: 250,
+          height: 30,
+          fontSize: 14,
+          isBold: false,
+          isItalic: false,
+          textColor: "#374151",
+          backgroundColor: "transparent",
+          borderColor: "transparent",
+          borderWidth: 0,
+          borderRadius: 0,
+          alignment: "right",
+          required: true
+        },
+        // Bill To Section
+        {
+          id: "bill-to-label",
+          label: "Bill To Label",
+          value: "Bill To:",
+          type: "text",
+          x: 50,
+          y: 200,
+          width: 100,
+          height: 30,
+          fontSize: 16,
+          isBold: true,
+          isItalic: false,
+          textColor: "#1f2937",
+          backgroundColor: "transparent",
+          borderColor: "transparent",
+          borderWidth: 0,
+          borderRadius: 0,
+          alignment: "left",
+          required: false
+        },
+        {
+          id: "client-details",
+          label: "Client Details",
+          value: "Client Company Name\nClient Address Line 1\nClient Address Line 2\nCity, State ZIP\nPhone: (555) 987-6543",
+          type: "textarea",
+          x: 50,
+          y: 240,
+          width: 350,
+          height: 100,
+          fontSize: 14,
+          isBold: false,
+          isItalic: false,
+          textColor: "#374151",
+          backgroundColor: "#f9fafb",
+          borderColor: "#d1d5db",
+          borderWidth: 1,
+          borderRadius: 4,
+          alignment: "left",
+          required: true
+        },
+        // Items Table Header
+        {
+          id: "items-header",
+          label: "Items Header",
+          value: "Description\t\t\tQty\tRate\tAmount",
+          type: "text",
+          x: 50,
+          y: 380,
+          width: 700,
+          height: 35,
+          fontSize: 14,
+          isBold: true,
+          isItalic: false,
+          textColor: "#ffffff",
+          backgroundColor: "#374151",
+          borderColor: "#374151",
+          borderWidth: 1,
+          borderRadius: 4,
+          alignment: "left",
+          required: false
+        },
+        // Sample Items
+        {
+          id: "item-1",
+          label: "Item 1",
+          value: "Professional Services - Web Development\t\t1\t$1,500.00\t$1,500.00",
+          type: "text",
+          x: 50,
+          y: 420,
+          width: 700,
+          height: 30,
+          fontSize: 12,
+          isBold: false,
+          isItalic: false,
+          textColor: "#374151",
+          backgroundColor: "transparent",
+          borderColor: "#e5e7eb",
+          borderWidth: 1,
+          borderRadius: 0,
+          alignment: "left",
+          required: false
+        },
+        {
+          id: "item-2",
+          label: "Item 2",
+          value: "Design Consultation\t\t\t\t2\t$250.00\t$500.00",
+          type: "text",
+          x: 50,
+          y: 455,
+          width: 700,
+          height: 30,
+          fontSize: 12,
+          isBold: false,
+          isItalic: false,
+          textColor: "#374151",
+          backgroundColor: "#f9fafb",
+          borderColor: "#e5e7eb",
+          borderWidth: 1,
+          borderRadius: 0,
+          alignment: "left",
+          required: false
+        },
+        // Totals Section
+        {
+          id: "subtotal",
+          label: "Subtotal",
+          value: "Subtotal: $2,000.00",
+          type: "text",
+          x: 500,
+          y: 520,
+          width: 250,
+          height: 30,
+          fontSize: 14,
+          isBold: false,
+          isItalic: false,
+          textColor: "#374151",
+          backgroundColor: "transparent",
+          borderColor: "transparent",
+          borderWidth: 0,
+          borderRadius: 0,
+          alignment: "right",
+          required: false
+        },
+        {
+          id: "tax",
+          label: "Tax",
+          value: "Tax (8.25%): $165.00",
+          type: "text",
+          x: 500,
+          y: 555,
+          width: 250,
+          height: 30,
+          fontSize: 14,
+          isBold: false,
+          isItalic: false,
+          textColor: "#374151",
+          backgroundColor: "transparent",
+          borderColor: "transparent",
+          borderWidth: 0,
+          borderRadius: 0,
+          alignment: "right",
+          required: false
+        },
+        {
+          id: "total",
+          label: "Total Amount",
+          value: "Total: $2,165.00",
+          type: "amount",
+          x: 500,
+          y: 590,
+          width: 250,
+          height: 40,
+          fontSize: 18,
+          isBold: true,
+          isItalic: false,
+          textColor: "#dc2626",
+          backgroundColor: "#fef2f2",
+          borderColor: "#dc2626",
+          borderWidth: 2,
+          borderRadius: 4,
+          alignment: "right",
+          required: true
+        },
+        // Payment Terms
+        {
+          id: "payment-terms",
+          label: "Payment Terms",
+          value: "Payment Terms:\n• Payment is due within 30 days of invoice date\n• Late payments may incur a 1.5% monthly service charge\n• Please include invoice number with payment\n\nThank you for your business!",
+          type: "textarea",
+          x: 50,
+          y: 680,
+          width: 700,
+          height: 120,
+          fontSize: 12,
+          isBold: false,
+          isItalic: false,
+          textColor: "#6b7280",
+          backgroundColor: "#f9fafb",
+          borderColor: "#d1d5db",
+          borderWidth: 1,
+          borderRadius: 4,
+          alignment: "left",
+          required: false
+        }
+      ],
     };
-    return [initial];
+    return [sampleTemplate];
   });
 
   const [currentTemplate, setCurrentTemplate] = useState<Template | null>(null);
@@ -102,16 +391,120 @@ export default function AdvancedBillGeneratorPage() {
   const [isFieldEditorMode, setIsFieldEditorMode] = useState<"create" | "edit">("create");
   const [fieldEditorData, setFieldEditorData] = useState<Partial<TemplateField>>({});
 
+  // Inline text editing
+  const [inlineEditField, setInlineEditField] = useState<TemplateField | null>(null);
+  const [inlineEditValue, setInlineEditValue] = useState("");
+  const [inlineEditPosition, setInlineEditPosition] = useState<{x: number; y: number; width: number; height: number} | null>(null);
+  const inlineInputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+
   // Image cache for drawing
   const imageCacheRef = useRef<Record<string, HTMLImageElement>>({});
+
+  // Double-click timer for inline editing
+  const doubleClickTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Undo/Redo system
+  const [undoStack, setUndoStack] = useState<Template[]>([]);
+  const [redoStack, setRedoStack] = useState<Template[]>([]);
+  const maxUndoSteps = 50;
 
   // Select first template by default
   useEffect(() => {
     if (!currentTemplate && templates.length > 0) setCurrentTemplate(templates[0]);
   }, [templates, currentTemplate]);
 
+  // Save state for undo/redo
+  const saveStateForUndo = useCallback(() => {
+    if (currentTemplate) {
+      setUndoStack(prev => {
+        const clonedTemplate = {
+          ...JSON.parse(JSON.stringify(currentTemplate)),
+          createdAt: new Date(currentTemplate.createdAt)
+        };
+        const newStack = [...prev, clonedTemplate];
+        return newStack.slice(-maxUndoSteps);
+      });
+      setRedoStack([]); // Clear redo stack when new action is performed
+    }
+  }, [currentTemplate, maxUndoSteps]);
+
+  // Undo function
+  const undo = useCallback(() => {
+    if (undoStack.length === 0 || !currentTemplate) return;
+    
+    const previousState = undoStack[undoStack.length - 1];
+    const newUndoStack = undoStack.slice(0, -1);
+    
+    // Save current state to redo stack
+    const clonedCurrent = {
+      ...JSON.parse(JSON.stringify(currentTemplate)),
+      createdAt: new Date(currentTemplate.createdAt)
+    };
+    setRedoStack(prev => [...prev, clonedCurrent]);
+    setUndoStack(newUndoStack);
+    
+    // Restore previous state
+    setCurrentTemplate(previousState);
+    setTemplates(prev => prev.map(t => t.id === previousState.id ? previousState : t));
+    setSelectedField(null);
+  }, [undoStack, currentTemplate]);
+
+  // Redo function
+  const redo = useCallback(() => {
+    if (redoStack.length === 0 || !currentTemplate) return;
+    
+    const nextState = redoStack[redoStack.length - 1];
+    const newRedoStack = redoStack.slice(0, -1);
+    
+    // Save current state to undo stack
+    const clonedCurrent = {
+      ...JSON.parse(JSON.stringify(currentTemplate)),
+      createdAt: new Date(currentTemplate.createdAt)
+    };
+    setUndoStack(prev => [...prev, clonedCurrent]);
+    setRedoStack(newRedoStack);
+    
+    // Restore next state
+    setCurrentTemplate(nextState);
+    setTemplates(prev => prev.map(t => t.id === nextState.id ? nextState : t));
+    setSelectedField(null);
+  }, [redoStack, currentTemplate]);
+
+  // Keyboard event handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if typing in an input field
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+      
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'z' && !e.shiftKey) {
+          e.preventDefault();
+          undo();
+        } else if ((e.key === 'z' && e.shiftKey) || e.key === 'y') {
+          e.preventDefault();
+          redo();
+        }
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedField && isEditing) {
+          e.preventDefault();
+          saveStateForUndo();
+          deleteField(selectedField.id);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo, selectedField, isEditing, saveStateForUndo]);
+
   // CRUD helpers
-  const updateField = (id: string, patch: Partial<TemplateField>) => {
+  const updateField = (id: string, patch: Partial<TemplateField>, saveUndo: boolean = true) => {
+    if (saveUndo) {
+      saveStateForUndo();
+    }
+    
     setTemplates((prev) =>
       prev.map((t) =>
         t.id !== (currentTemplate?.id || t.id)
@@ -130,14 +523,67 @@ export default function AdvancedBillGeneratorPage() {
     );
   };
 
-  const deleteField = (id: string) => {
+  const deleteField = (id: string, saveUndo: boolean = false) => {
     if (!currentTemplate) return;
+    
+    if (saveUndo) {
+      saveStateForUndo();
+    }
+    
     setTemplates((prev) =>
       prev.map((t) => (t.id === currentTemplate.id ? { ...t, fields: t.fields.filter((f) => f.id !== id) } : t))
     );
     setCurrentTemplate((ct) => (ct ? { ...ct, fields: ct.fields.filter((f) => f.id !== id) } : ct));
     setSelectedField(null);
   };
+
+  // Inline editing helpers
+  const startInlineEdit = (field: TemplateField) => {
+    if (field.type === "image" || field.type === "signature") return;
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = rect.width / canvas.width;
+    const scaleY = rect.height / canvas.height;
+    
+    setInlineEditField(field);
+    setInlineEditValue(field.value || "");
+    setInlineEditPosition({
+      x: field.x * scaleX + rect.left,
+      y: field.y * scaleY + rect.top,
+      width: field.width * scaleX,
+      height: field.height * scaleY
+    });
+  };
+
+  const finishInlineEdit = () => {
+    if (inlineEditField) {
+      updateField(inlineEditField.id, { value: inlineEditValue }, true);
+    }
+    setInlineEditField(null);
+    setInlineEditValue("");
+    setInlineEditPosition(null);
+  };
+
+  const cancelInlineEdit = () => {
+    setInlineEditField(null);
+    setInlineEditValue("");
+    setInlineEditPosition(null);
+  };
+
+  // Focus inline input when it appears
+  useEffect(() => {
+    if (inlineEditField && inlineInputRef.current) {
+      inlineInputRef.current.focus();
+      if (inlineInputRef.current instanceof HTMLInputElement) {
+        inlineInputRef.current.select();
+      } else {
+        inlineInputRef.current.setSelectionRange(0, inlineEditValue.length);
+      }
+    }
+  }, [inlineEditField]);
 
   // Render template to canvas
   const renderTemplate = useCallback(() => {
@@ -193,13 +639,31 @@ export default function AdvancedBillGeneratorPage() {
         // Text-like fields
         ctx.fillStyle = field.textColor || "#111827";
         ctx.font = `${field.isItalic ? "italic " : ""}${field.isBold ? "bold " : ""}${field.fontSize || 16}px sans-serif`;
-        ctx.textBaseline = "middle";
         let tx = field.x + 8;
         if (field.alignment === "center") tx = field.x + field.width / 2;
         if (field.alignment === "right") tx = field.x + field.width - 8;
         ctx.textAlign = field.alignment as CanvasTextAlign;
         const content = field.value || field.placeholder || field.label || "";
-        ctx.fillText(content, tx, field.y + field.height / 2, field.width - 16);
+        
+        // Handle multi-line text for textarea fields
+        if (field.type === "textarea" && content.includes('\n')) {
+          const lines = content.split('\n');
+          const lineHeight = (field.fontSize || 16) * 1.2;
+          const totalTextHeight = lines.length * lineHeight;
+          let startY = field.y + (field.height - totalTextHeight) / 2 + lineHeight / 2;
+          
+          ctx.textBaseline = "middle";
+          lines.forEach((line, index) => {
+            const y = startY + (index * lineHeight);
+            if (y >= field.y && y <= field.y + field.height) {
+              ctx.fillText(line, tx, y, field.width - 16);
+            }
+          });
+        } else {
+          // Single line text
+          ctx.textBaseline = "middle";
+          ctx.fillText(content, tx, field.y + field.height / 2, field.width - 16);
+        }
       }
 
       // Draw sub-elements (labels, captions)
@@ -439,18 +903,30 @@ export default function AdvancedBillGeneratorPage() {
   // Mouse handlers
   const handleMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isEditing || !currentTemplate) return;
+    
+    // Cancel inline editing if clicking elsewhere
+    if (inlineEditField) {
+      finishInlineEdit();
+      return;
+    }
+    
     const { x, y } = getMousePos(event);
-    const clickedField = hitTest(x, y);
-    if (clickedField) {
-      setSelectedField(clickedField);
-      const handle = getHandleAtPosition(x, y, clickedField);
+    const field = hitTest(x, y);
+    
+    if (field) {
+      setSelectedField(field);
+      const handle = getHandleAtPosition(x, y, field);
       if (handle) {
+        // Save state before resizing
+        saveStateForUndo();
         setIsResizing(true);
         setResizeHandle(handle);
-        resizeOriginRef.current = { startX: x, startY: y, field: { ...clickedField } };
+        resizeOriginRef.current = { startX: x, startY: y, field };
       } else {
+        // Save state before dragging
+        saveStateForUndo();
         setIsDragging(true);
-        setDragOffset({ x: x - clickedField.x, y: y - clickedField.y });
+        setDragOffset({ x: x - field.x, y: y - field.y });
       }
     } else {
       setSelectedField(null);
@@ -464,17 +940,16 @@ export default function AdvancedBillGeneratorPage() {
     if (isDragging && selectedField) {
       const nx = curX - dragOffset.x;
       const ny = curY - dragOffset.y;
-      // Allow moving to canvas edges (0,0) and constrain within canvas bounds
       const canvasWidth = currentTemplate.width;
       const canvasHeight = currentTemplate.height;
       
-      // Allow fields to be positioned exactly at the edges
+      // Allow moving to canvas edges (0,0) and constrain within canvas bounds
       const constrainedX = Math.max(0, Math.min(nx, canvasWidth - selectedField.width));
       const constrainedY = Math.max(0, Math.min(ny, canvasHeight - selectedField.height));
       
       // Only update if position actually changed
       if (selectedField.x !== constrainedX || selectedField.y !== constrainedY) {
-        updateField(selectedField.id, { x: constrainedX, y: constrainedY });
+        updateField(selectedField.id, { x: constrainedX, y: constrainedY }, false);
       }
       return;
     }
@@ -570,12 +1045,12 @@ export default function AdvancedBillGeneratorPage() {
       const constrainedW = Math.min(Math.max(minSize, newW), canvasWidth - constrainedX);
       const constrainedH = Math.min(Math.max(minSize, newH), canvasHeight - constrainedY);
       
-      updateField(orig.id, { 
-        x: constrainedX, 
-        y: constrainedY, 
-        width: constrainedW, 
+      updateField(resizeOriginRef.current.field.id, {
+        x: constrainedX,
+        y: constrainedY,
+        width: constrainedW,
         height: constrainedH 
-      });
+      }, false);
       return;
     }
   };
@@ -584,12 +1059,47 @@ export default function AdvancedBillGeneratorPage() {
     setIsDragging(false);
     setIsResizing(false);
     setResizeHandle(null);
-    resizeOriginRef.current = { startX: 0, startY: 0, field: null };
+  };
+
+  // Handle keyboard events for inline editing
+  const handleInlineKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey && inlineEditField?.type !== "textarea") {
+      e.preventDefault();
+      finishInlineEdit();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancelInlineEdit();
+    }
+  };
+
+  // Handle double-click for inline editing
+  const handleDoubleClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isEditing || !currentTemplate) return;
+    
+    const { x, y } = getMousePos(event);
+    const field = hitTest(x, y);
+    
+    if (field && field.type !== "image" && field.type !== "signature") {
+      // Cancel any pending drag/resize operations
+      setIsDragging(false);
+      setIsResizing(false);
+      setResizeHandle(null);
+      
+      // Clear the timer to prevent delayed drag behavior
+      if (doubleClickTimerRef.current) {
+        clearTimeout(doubleClickTimerRef.current);
+        doubleClickTimerRef.current = null;
+      }
+      
+      startInlineEdit(field);
+    }
   };
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isEditing || !currentTemplate) return;
     const { x, y } = getMousePos(e);
+    const field = hitTest(x, y);
+    setSelectedField(field);
     const f = hitTest(x, y);
     setSelectedField(f);
   };
@@ -971,15 +1481,82 @@ export default function AdvancedBillGeneratorPage() {
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
                   onClick={handleCanvasClick}
+                  onDoubleClick={handleDoubleClick}
                   style={{ 
                     cursor: isEditing ? "move" : "default",
                     touchAction: 'none'
                   }}
                 />
 
+                {/* Inline Text Editing Overlay */}
+                {inlineEditField && inlineEditPosition && (
+                  <div
+                    className="fixed z-50"
+                    style={{
+                      left: inlineEditPosition.x,
+                      top: inlineEditPosition.y,
+                      width: inlineEditPosition.width,
+                      height: inlineEditPosition.height,
+                    }}
+                  >
+                    {inlineEditField.type === "textarea" ? (
+                      <textarea
+                        ref={inlineInputRef as React.RefObject<HTMLTextAreaElement>}
+                        value={inlineEditValue}
+                        onChange={(e) => setInlineEditValue(e.target.value)}
+                        onKeyDown={handleInlineKeyDown}
+                        onBlur={finishInlineEdit}
+                        className="w-full h-full p-2 text-sm border-2 border-blue-500 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none"
+                        style={{
+                          fontSize: `${(inlineEditField.fontSize || 16) * (inlineEditPosition.width / inlineEditField.width)}px`,
+                          fontWeight: inlineEditField.isBold ? 'bold' : 'normal',
+                          fontStyle: inlineEditField.isItalic ? 'italic' : 'normal',
+                          textAlign: inlineEditField.alignment as any,
+                          color: inlineEditField.textColor || '#111827'
+                        }}
+                      />
+                    ) : (
+                      <input
+                        ref={inlineInputRef as React.RefObject<HTMLInputElement>}
+                        type="text"
+                        value={inlineEditValue}
+                        onChange={(e) => setInlineEditValue(e.target.value)}
+                        onKeyDown={handleInlineKeyDown}
+                        onBlur={finishInlineEdit}
+                        className="w-full h-full p-2 text-sm border-2 border-blue-500 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        style={{
+                          fontSize: `${(inlineEditField.fontSize || 16) * (inlineEditPosition.width / inlineEditField.width)}px`,
+                          fontWeight: inlineEditField.isBold ? 'bold' : 'normal',
+                          fontStyle: inlineEditField.isItalic ? 'italic' : 'normal',
+                          textAlign: inlineEditField.alignment as any,
+                          color: inlineEditField.textColor || '#111827'
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
+
                 {isEditing && (
-                  <div className="absolute top-2 right-2 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-lg border">
-                    <p className="text-xs text-gray-600 dark:text-gray-400">💡 Drag fields to reposition • Click to select</p>
+                  <div className="absolute top-2 right-2 bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border">
+                    <div className="flex items-center gap-2 mb-2">
+                      <button
+                        onClick={undo}
+                        disabled={undoStack.length === 0}
+                        className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-xs py-1 px-2 rounded transition-colors duration-300"
+                        title="Undo (Ctrl+Z)"
+                      >
+                        ↶ Undo
+                      </button>
+                      <button
+                        onClick={redo}
+                        disabled={redoStack.length === 0}
+                        className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-xs py-1 px-2 rounded transition-colors duration-300"
+                        title="Redo (Ctrl+Shift+Z)"
+                      >
+                        ↷ Redo
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">💡 Double-click to edit • Delete key to remove • Ctrl+Z to undo</p>
                   </div>
                 )}
               </div>
@@ -1035,7 +1612,10 @@ export default function AdvancedBillGeneratorPage() {
                           Edit
                         </button>
                         <button
-                          onClick={() => deleteField(field.id)}
+                          onClick={() => {
+                          saveStateForUndo();
+                          deleteField(field.id);
+                        }}
                           className="bg-red-600 hover:bg-red-700 text-white text-xs py-1 px-2 rounded transition-colors duration-300"
                         >
                           Delete
@@ -1142,6 +1722,14 @@ export default function AdvancedBillGeneratorPage() {
                         </label>
                         <div className="text-[11px] text-gray-500 dark:text-gray-400">Supported: PNG, JPG, JPEG, WEBP</div>
                       </div>
+                    ) : fieldEditorData.type === "textarea" ? (
+                      <textarea
+                        value={fieldEditorData.value || ""}
+                        onChange={(e) => setFieldEditorData({ ...fieldEditorData, value: e.target.value })}
+                        className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 min-h-[100px] resize-vertical"
+                        placeholder="Enter default value (use \n for line breaks)"
+                        rows={4}
+                      />
                     ) : (
                       <input
                         type="text"
