@@ -31,7 +31,7 @@ export default function Home() {
       </div>
 
       {/* Hero Section */}
-      <section className="max-w-6xl mx-auto px-4 min-h-[clamp(580px,calc(100svh-4rem-1px),820px)] flex items-center justify-center py-8 sm:py-12">
+      <section className="max-w-6xl mx-auto px-4 min-h-[clamp(420px,calc(100svh-12rem),640px)] flex items-center justify-center py-1 sm:py-3">
         <motion.div
           initial="hidden"
           animate="show"
@@ -47,21 +47,21 @@ export default function Home() {
 
           <motion.h1
             variants={fadeInUp}
-            className="mt-6 text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-teal-400 to-indigo-400 dark:from-blue-300 dark:via-teal-300 dark:to-indigo-300"
+            className="mt-3 text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-teal-400 to-indigo-400 dark:from-blue-300 dark:via-teal-300 dark:to-indigo-300"
           >
             BillMate
           </motion.h1>
 
           <motion.p
             variants={fadeInUp}
-            className="mt-4 max-w-3xl mx-auto text-lg sm:text-xl text-transparent bg-clip-text bg-gradient-to-r from-white/85 to-white/60 dark:from-white/85 dark:to-white/60"
+            className="mt-2 max-w-3xl mx-auto text-lg sm:text-xl text-transparent bg-clip-text bg-gradient-to-r from-white/85 to-white/60 dark:from-white/85 dark:to-white/60"
           >
             Create professional rent bills with auto-fill, PDF/Word/Image upload parsing, and one-click export.
           </motion.p>
 
           <motion.div
             variants={fadeInUp}
-            className="mt-8 grid gap-4 sm:flex sm:flex-wrap sm:justify-center"
+            className="mt-5 grid gap-3 sm:flex sm:flex-wrap sm:justify-center"
           >
             <Link
               href="/bills/new"
@@ -86,7 +86,7 @@ export default function Home() {
       </section>
 
       {/* Animated Attraction Banner */}
-      <section className="relative py-4 sm:py-6">
+      <section className="relative py-2 sm:py-4">
         <div className="max-w-6xl mx-auto px-4 overflow-hidden">
           <motion.div
             className="flex gap-6 w-max"
@@ -126,7 +126,7 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section className="max-w-6xl mx-auto px-4 pb-16 sm:pb-20">
+      <section className="max-w-6xl mx-auto px-4 pb-12 sm:pb-16">
         <motion.div
           initial="hidden"
           whileInView="show"
@@ -181,7 +181,7 @@ export default function Home() {
 
       {/* CTA Strip */}
       <section className="relative">
-        <div className="max-w-6xl mx-auto px-4 pb-16 sm:pb-24">
+        <div className="max-w-6xl mx-auto px-4 pb-12 sm:pb-16">
           <motion.div
             initial="hidden"
             whileInView="show"
