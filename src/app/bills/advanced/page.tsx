@@ -8,82 +8,17 @@ import React, {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import jsPDF from "jspdf";
 import { readArrayKey, writeArrayKey } from "@/lib/localStore";
-import NewTemplateChooserModal from "@/components/advanced/NewTemplateChooserModal";
-import FieldEditorModal from "@/components/advanced/FieldEditorModal";
-import BillPreviewModal from "@/components/advanced/BillPreviewModal";
-import TemplateSettingsModal from "@/components/advanced/TemplateSettingsModal";
-import FieldsPanel from "@/components/advanced/FieldsPanel";
-import TemplateList from "@/components/advanced/TemplateList";
-import InlineTextEditor from "@/components/advanced/InlineTextEditor";
-import ExportButtons from "@/components/advanced/ExportButtons";
-import TemplateCanvas from "@/components/advanced/TemplateCanvas";
+import AdvancedHeader from "@/components/advanced/page/AdvancedHeader";
+import TemplateManagement from "@/components/advanced/page/TemplateManagement";
+import EditorSection from "@/components/advanced/page/EditorSection";
+import ModalsSection from "@/components/advanced/page/ModalsSection";
+import InstructionsSection from "@/components/advanced/page/InstructionsSection";
+import { makeDefaultSampleTemplate } from "@/lib/sampleTemplates";
+import { Template, TemplateField, SubElement } from "@/lib/advancedTypes";
 
-// Types
-interface SubElement {
-  id: string;
-  type: "text" | "caption";
-  content: string;
-  position: "top" | "bottom" | "left" | "right";
-  offsetX: number;
-  offsetY: number;
-  fontSize: number;
-  textColor: string;
-  isBold: boolean;
-  isItalic: boolean;
-}
-
-interface TemplateField {
-  id: string;
-  label: string;
-  value: string;
-  type:
-    | "text"
-    | "number"
-    | "date"
-    | "amount"
-    | "textarea"
-    | "select"
-    | "image"
-    | "signature";
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  fontSize: number;
-  isBold: boolean;
-  isItalic: boolean;
-  textColor: string;
-  backgroundColor: string;
-  borderColor: string;
-  borderWidth: number;
-  borderRadius: number;
-  alignment: "left" | "center" | "right";
-  placeholder?: string;
-  options?: string[];
-  required: boolean;
-  lockAspect?: boolean; // maintain aspect ratio during resize for image/signature
-  subElements?: SubElement[]; // additional text elements like labels, captions
-}
-
-interface Template {
-  id: string;
-  name: string;
-  description: string;
-  width: number;
-  height: number;
-  createdAt: Date;
-  fields: TemplateField[];
-}
+// Types moved to src/lib/advancedTypes.ts
 
 const TEMPLATES_KEY = "hrb_templates_v1";
 const LAST_TEMPLATE_KEY = "hrb_last_template_id_v1";
@@ -115,489 +50,7 @@ export default function AdvancedBillGeneratorPage() {
   const router = useRouter();
   // Templates state (simple local list)
   const [templates, setTemplates] = useState<Template[]>(() => {
-    const sampleTemplate: Template = {
-      id: "tpl-1",
-      name: "Professional Invoice Template",
-      description:
-        "A complete invoice template with company header, client details, and itemized billing",
-      width: 800,
-      height: 1120,
-      createdAt: new Date(),
-      fields: [
-        // Company Header
-        {
-          id: "company-name",
-          label: "Company Name",
-          value: "Your Company Name",
-          type: "text",
-          x: 50,
-          y: 30,
-          width: 300,
-          height: 40,
-          fontSize: 24,
-          isBold: true,
-          isItalic: false,
-          textColor: "#1f2937",
-          backgroundColor: "transparent",
-          borderColor: "transparent",
-          borderWidth: 0,
-          borderRadius: 0,
-          alignment: "left",
-          required: true,
-        },
-        {
-          id: "company-address",
-          label: "Company Address",
-          value:
-            "123 Business Street\nCity, State 12345\nPhone: (555) 123-4567\nEmail: info@company.com",
-          type: "textarea",
-          x: 50,
-          y: 80,
-          width: 300,
-          height: 80,
-          fontSize: 12,
-          isBold: false,
-          isItalic: false,
-          textColor: "#6b7280",
-          backgroundColor: "transparent",
-          borderColor: "transparent",
-          borderWidth: 0,
-          borderRadius: 0,
-          alignment: "left",
-          required: false,
-        },
-        // Invoice Title
-        {
-          id: "invoice-title",
-          label: "Invoice Title",
-          value: "INVOICE",
-          type: "text",
-          x: 500,
-          y: 30,
-          width: 250,
-          height: 50,
-          fontSize: 32,
-          isBold: true,
-          isItalic: false,
-          textColor: "#dc2626",
-          backgroundColor: "transparent",
-          borderColor: "transparent",
-          borderWidth: 0,
-          borderRadius: 0,
-          alignment: "right",
-          required: true,
-        },
-        // Invoice Details
-        {
-          id: "invoice-number",
-          label: "Invoice Number",
-          value: "INV-001",
-          type: "text",
-          x: 500,
-          y: 90,
-          width: 250,
-          height: 30,
-          fontSize: 14,
-          isBold: false,
-          isItalic: false,
-          textColor: "#374151",
-          backgroundColor: "transparent",
-          borderColor: "transparent",
-          borderWidth: 0,
-          borderRadius: 0,
-          alignment: "right",
-          required: true,
-        },
-        {
-          id: "invoice-date",
-          label: "Invoice Date",
-          value: new Date().toLocaleDateString(),
-          type: "date",
-          x: 500,
-          y: 130,
-          width: 250,
-          height: 30,
-          fontSize: 14,
-          isBold: false,
-          isItalic: false,
-          textColor: "#374151",
-          backgroundColor: "transparent",
-          borderColor: "transparent",
-          borderWidth: 0,
-          borderRadius: 0,
-          alignment: "right",
-          required: true,
-        },
-        // Bill To Section
-        {
-          id: "bill-to-label",
-          label: "Bill To Label",
-          value: "Bill To:",
-          type: "text",
-          x: 50,
-          y: 200,
-          width: 100,
-          height: 30,
-          fontSize: 16,
-          isBold: true,
-          isItalic: false,
-          textColor: "#1f2937",
-          backgroundColor: "transparent",
-          borderColor: "transparent",
-          borderWidth: 0,
-          borderRadius: 0,
-          alignment: "left",
-          required: false,
-        },
-        {
-          id: "client-details",
-          label: "Client Details",
-          value:
-            "Client Company Name\nClient Address Line 1\nClient Address Line 2\nCity, State ZIP\nPhone: (555) 987-6543",
-          type: "textarea",
-          x: 50,
-          y: 240,
-          width: 350,
-          height: 100,
-          fontSize: 14,
-          isBold: false,
-          isItalic: false,
-          textColor: "#374151",
-          backgroundColor: "#f9fafb",
-          borderColor: "#d1d5db",
-          borderWidth: 1,
-          borderRadius: 4,
-          alignment: "left",
-          required: true,
-        },
-        // Table Header Row
-        {
-          id: "header-description",
-          label: "Header Description",
-          value: "Description",
-          type: "text",
-          x: 50,
-          y: 380,
-          width: 350,
-          height: 35,
-          fontSize: 14,
-          isBold: true,
-          isItalic: false,
-          textColor: "#ffffff",
-          backgroundColor: "#4b5563",
-          borderColor: "#374151",
-          borderWidth: 1,
-          borderRadius: 0,
-          alignment: "left",
-          required: false,
-        },
-        {
-          id: "header-qty",
-          label: "Header Qty",
-          value: "Qty",
-          type: "text",
-          x: 400,
-          y: 380,
-          width: 80,
-          height: 35,
-          fontSize: 14,
-          isBold: true,
-          isItalic: false,
-          textColor: "#ffffff",
-          backgroundColor: "#4b5563",
-          borderColor: "#374151",
-          borderWidth: 1,
-          borderRadius: 0,
-          alignment: "center",
-          required: false,
-        },
-        {
-          id: "header-rate",
-          label: "Header Rate",
-          value: "Rate",
-          type: "text",
-          x: 480,
-          y: 380,
-          width: 120,
-          height: 35,
-          fontSize: 14,
-          isBold: true,
-          isItalic: false,
-          textColor: "#ffffff",
-          backgroundColor: "#4b5563",
-          borderColor: "#374151",
-          borderWidth: 1,
-          borderRadius: 0,
-          alignment: "center",
-          required: false,
-        },
-        {
-          id: "header-amount",
-          label: "Header Amount",
-          value: "Amount",
-          type: "text",
-          x: 600,
-          y: 380,
-          width: 150,
-          height: 35,
-          fontSize: 14,
-          isBold: true,
-          isItalic: false,
-          textColor: "#ffffff",
-          backgroundColor: "#4b5563",
-          borderColor: "#374151",
-          borderWidth: 1,
-          borderRadius: 0,
-          alignment: "center",
-          required: false,
-        },
-        // Item 1 Row
-        {
-          id: "item1-description",
-          label: "Item 1 Description",
-          value: "Professional Services - Web Development",
-          type: "text",
-          x: 50,
-          y: 415,
-          width: 350,
-          height: 30,
-          fontSize: 12,
-          isBold: false,
-          isItalic: false,
-          textColor: "#374151",
-          backgroundColor: "#ffffff",
-          borderColor: "#e5e7eb",
-          borderWidth: 1,
-          borderRadius: 0,
-          alignment: "left",
-          required: false,
-        },
-        {
-          id: "item1-qty",
-          label: "Item 1 Qty",
-          value: "1",
-          type: "text",
-          x: 400,
-          y: 415,
-          width: 80,
-          height: 30,
-          fontSize: 12,
-          isBold: false,
-          isItalic: false,
-          textColor: "#374151",
-          backgroundColor: "#ffffff",
-          borderColor: "#e5e7eb",
-          borderWidth: 1,
-          borderRadius: 0,
-          alignment: "center",
-          required: false,
-        },
-        {
-          id: "item1-rate",
-          label: "Item 1 Rate",
-          value: "$1,500.00",
-          type: "text",
-          x: 480,
-          y: 415,
-          width: 120,
-          height: 30,
-          fontSize: 12,
-          isBold: false,
-          isItalic: false,
-          textColor: "#374151",
-          backgroundColor: "#ffffff",
-          borderColor: "#e5e7eb",
-          borderWidth: 1,
-          borderRadius: 0,
-          alignment: "right",
-          required: false,
-        },
-        {
-          id: "item1-amount",
-          label: "Item 1 Amount",
-          value: "$1,500.00",
-          type: "text",
-          x: 600,
-          y: 415,
-          width: 150,
-          height: 30,
-          fontSize: 12,
-          isBold: false,
-          isItalic: false,
-          textColor: "#374151",
-          backgroundColor: "#ffffff",
-          borderColor: "#e5e7eb",
-          borderWidth: 1,
-          borderRadius: 0,
-          alignment: "right",
-          required: false,
-        },
-        // Item 2 Row
-        {
-          id: "item2-description",
-          label: "Item 2 Description",
-          value: "Design Consultation",
-          type: "text",
-          x: 50,
-          y: 445,
-          width: 350,
-          height: 30,
-          fontSize: 12,
-          isBold: false,
-          isItalic: false,
-          textColor: "#374151",
-          backgroundColor: "#f9fafb",
-          borderColor: "#e5e7eb",
-          borderWidth: 1,
-          borderRadius: 0,
-          alignment: "left",
-          required: false,
-        },
-        {
-          id: "item2-qty",
-          label: "Item 2 Qty",
-          value: "2",
-          type: "text",
-          x: 400,
-          y: 445,
-          width: 80,
-          height: 30,
-          fontSize: 12,
-          isBold: false,
-          isItalic: false,
-          textColor: "#374151",
-          backgroundColor: "#f9fafb",
-          borderColor: "#e5e7eb",
-          borderWidth: 1,
-          borderRadius: 0,
-          alignment: "center",
-          required: false,
-        },
-        {
-          id: "item2-rate",
-          label: "Item 2 Rate",
-          value: "$250.00",
-          type: "text",
-          x: 480,
-          y: 445,
-          width: 120,
-          height: 30,
-          fontSize: 12,
-          isBold: false,
-          isItalic: false,
-          textColor: "#374151",
-          backgroundColor: "#f9fafb",
-          borderColor: "#e5e7eb",
-          borderWidth: 1,
-          borderRadius: 0,
-          alignment: "right",
-          required: false,
-        },
-        {
-          id: "item2-amount",
-          label: "Item 2 Amount",
-          value: "$500.00",
-          type: "text",
-          x: 600,
-          y: 445,
-          width: 150,
-          height: 30,
-          fontSize: 12,
-          isBold: false,
-          isItalic: false,
-          textColor: "#374151",
-          backgroundColor: "#f9fafb",
-          borderColor: "#e5e7eb",
-          borderWidth: 1,
-          borderRadius: 0,
-          alignment: "right",
-          required: false,
-        },
-        // Totals Section
-        {
-          id: "subtotal",
-          label: "Subtotal",
-          value: "Subtotal: $2,000.00",
-          type: "text",
-          x: 500,
-          y: 520,
-          width: 250,
-          height: 30,
-          fontSize: 14,
-          isBold: false,
-          isItalic: false,
-          textColor: "#374151",
-          backgroundColor: "transparent",
-          borderColor: "transparent",
-          borderWidth: 0,
-          borderRadius: 0,
-          alignment: "right",
-          required: false,
-        },
-        {
-          id: "tax",
-          label: "Tax",
-          value: "Tax (8.25%): $165.00",
-          type: "text",
-          x: 500,
-          y: 555,
-          width: 250,
-          height: 30,
-          fontSize: 14,
-          isBold: false,
-          isItalic: false,
-          textColor: "#374151",
-          backgroundColor: "transparent",
-          borderColor: "transparent",
-          borderWidth: 0,
-          borderRadius: 0,
-          alignment: "right",
-          required: false,
-        },
-        {
-          id: "total",
-          label: "Total Amount",
-          value: "Total: $2,165.00",
-          type: "amount",
-          x: 500,
-          y: 590,
-          width: 250,
-          height: 40,
-          fontSize: 18,
-          isBold: true,
-          isItalic: false,
-          textColor: "#dc2626",
-          backgroundColor: "#fef2f2",
-          borderColor: "#dc2626",
-          borderWidth: 2,
-          borderRadius: 4,
-          alignment: "right",
-          required: true,
-        },
-        // Payment Terms
-        {
-          id: "payment-terms",
-          label: "Payment Terms",
-          value:
-            "Payment Terms:\n• Payment is due within 30 days of invoice date\n• Late payments may incur a 1.5% monthly service charge\n• Please include invoice number with payment\n\nThank you for your business!",
-          type: "textarea",
-          x: 50,
-          y: 680,
-          width: 700,
-          height: 120,
-          fontSize: 12,
-          isBold: false,
-          isItalic: false,
-          textColor: "#6b7280",
-          backgroundColor: "#f9fafb",
-          borderColor: "#d1d5db",
-          borderWidth: 1,
-          borderRadius: 4,
-          alignment: "left",
-          required: false,
-        },
-      ],
-    };
+    const sampleTemplate = makeDefaultSampleTemplate();
     // Important: don't read localStorage during initial render to avoid SSR/CSR mismatches
     // We'll load any stored templates after mount in a useEffect.
     return [sampleTemplate];
@@ -1245,28 +698,6 @@ export default function AdvancedBillGeneratorPage() {
   }, [renderTemplate]);
 
   // Helpers
-  const roundRect = (
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    radius: number,
-    fill: boolean,
-    stroke: boolean
-  ) => {
-    const r = Math.min(radius || 0, width / 2, height / 2);
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + width, y, x + width, y + height, r);
-    ctx.arcTo(x + width, y + height, x, y + height, r);
-    ctx.arcTo(x, y + height, x, y, r);
-    ctx.arcTo(x, y, x + width, y, r);
-    ctx.closePath();
-    if (fill) ctx.fill();
-    if (stroke) ctx.stroke();
-  };
-
   const getMousePos = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
@@ -1697,8 +1128,6 @@ export default function AdvancedBillGeneratorPage() {
     const { x, y } = getMousePos(e);
     const field = hitTest(x, y);
     setSelectedField(field);
-    const f = hitTest(x, y);
-    setSelectedField(f);
   };
 
   // Create from our professional sample (duplicate first professional or fallback to defaults)
@@ -2383,18 +1812,10 @@ const exportCurrentCanvasToPdf = () => {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-6 md:mb-8">
-          <h1 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3 md:mb-4">
-            🚀 Advanced Template Builder
-          </h1>
-          <p className="text-base md:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto px-2">
-            Create professional bill templates with advanced styling,
-            positioning, and customization options!
-          </p>
-        </div>
+        <AdvancedHeader />
 
         {/* Template Management */}
-        <TemplateList
+        <TemplateManagement
           templates={templates as any}
           editingTemplateId={editingTemplateId}
           editingTemplateName={editingTemplateName}
@@ -2441,142 +1862,93 @@ const exportCurrentCanvasToPdf = () => {
           }}
           onDelete={(templateId) => deleteTemplate(templateId)}
         />
-        {templates.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No templates yet. Create your first advanced template to get started!
-          </div>
-        )}
 
         {/* Template Editor */}
         {currentTemplate && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-8 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-start md:items-center justify-between mb-4 md:mb-6 flex-col md:flex-row gap-3 md:gap-0">
-              <div>
-                <h3 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">
-                  {currentTemplate.name}
-                </h3>
-                <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
-                  {currentTemplate.fields.length} fields • Advanced styling
-                  enabled
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2 md:gap-3 w-full md:w-auto">
-                {!isEditing ? (
-                  <Button className="w-full md:w-auto" onClick={() => setIsEditing(true)}>
-                    ✏️ Edit Template
-                  </Button>
-                ) : (
-                  <ExportButtons
-                    onAddField={() => openFieldEditor(undefined, "create")}
-                    onExportPdf={exportCurrentCanvasToPdf}
-                    onExportJson={() => currentTemplate && exportTemplateJson(currentTemplate)}
-                    onUseInCustom={() => {
-                      if (!currentTemplate) return;
-                      try {
-                        const serializable: any = {
-                          ...currentTemplate,
-                          createdAt:
-                            currentTemplate.createdAt instanceof Date
-                              ? currentTemplate.createdAt.toISOString()
-                              : (currentTemplate as any).createdAt,
-                        };
-                        if (typeof window !== "undefined") {
-                          window.localStorage.setItem(CUSTOM_INBOX_KEY, JSON.stringify(serializable));
-                        }
-                        router.push("/bills/custom");
-                      } catch {}
-                    }}
-                    onSaveTemplate={saveTemplate}
-                  />
-                )}
-              </div>
-            </div>
-
-            {/* Template Canvas */}
-            <TemplateCanvas
-              templateSize={{
-                width: currentTemplate.width,
-                height: currentTemplate.height,
-              }}
-              containerSize={canvasContainerSize as any}
-              canvasRef={canvasRef as any}
-              isEditing={isEditing}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-              onClick={handleCanvasClick}
-              onDoubleClick={handleDoubleClick}
-              inlineField={inlineEditField as any}
-              inlinePosition={inlineEditPosition as any}
-              inlineInputRef={inlineInputRef as any}
-              inlineValue={inlineEditValue}
-              onInlineChange={setInlineEditValue}
-              onInlineKeyDown={handleInlineKeyDown as any}
-              onInlineBlur={finishInlineEdit}
-            />
-
-            {/* Fields Panel */}
-            {isEditing && currentTemplate && (
-              <FieldsPanel
-                fields={currentTemplate.fields as any}
-                selectedFieldId={selectedField?.id || null}
-                onAddField={() => openFieldEditor(undefined, "create")}
-                onEditField={(f) => openFieldEditor(f as any, "edit")}
-                onDeleteField={(id) => {
-                  saveStateForUndo();
-                  deleteField(id);
-                }}
-                onUploadImage={(fieldId, file) => onUploadImageForField(fieldId, file)}
-              />
-            )}
-          </div>
+          <EditorSection
+            template={currentTemplate as any}
+            isEditing={isEditing}
+            onStartEditing={() => setIsEditing(true)}
+            onAddField={() => openFieldEditor(undefined, "create")}
+            onExportPdf={exportCurrentCanvasToPdf}
+            onExportJson={() => currentTemplate && exportTemplateJson(currentTemplate)}
+            onUseInCustom={() => {
+              if (!currentTemplate) return;
+              try {
+                const serializable: any = {
+                  ...currentTemplate,
+                  createdAt:
+                    currentTemplate.createdAt instanceof Date
+                      ? currentTemplate.createdAt.toISOString()
+                      : (currentTemplate as any).createdAt,
+                };
+                if (typeof window !== "undefined") {
+                  window.localStorage.setItem(CUSTOM_INBOX_KEY, JSON.stringify(serializable));
+                }
+                router.push("/bills/custom");
+              } catch {}
+            }}
+            onSaveTemplate={saveTemplate}
+            canvasContainerSize={canvasContainerSize as any}
+            canvasRef={canvasRef as any}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onClick={handleCanvasClick}
+            onDoubleClick={handleDoubleClick}
+            inlineField={inlineEditField as any}
+            inlinePosition={inlineEditPosition as any}
+            inlineInputRef={inlineInputRef as any}
+            inlineValue={inlineEditValue}
+            onInlineChange={setInlineEditValue}
+            onInlineKeyDown={handleInlineKeyDown as any}
+            onInlineBlur={finishInlineEdit}
+            selectedFieldId={selectedField?.id || null}
+            onEditField={(f) => openFieldEditor(f as any, "edit")}
+            onDeleteField={(id) => {
+              saveStateForUndo();
+              deleteField(id);
+            }}
+            onUploadImage={(fieldId, file) => onUploadImageForField(fieldId, file)}
+          />
         )}
 
-        {/* New Template Chooser Modal */}
-        <NewTemplateChooserModal
-          open={showNewTemplateChooser}
-          onClose={() => setShowNewTemplateChooser(false)}
+        <ModalsSection
+          /* New template chooser */
+          showNewTemplateChooser={showNewTemplateChooser}
+          onCloseNewTemplateChooser={() => setShowNewTemplateChooser(false)}
           onCreateProfessional={createFromProfessional}
           onCreateEmpty={createEmptyTemplate}
-        />
-
-        {/* Field Editor Modal */}
-        <FieldEditorModal
-          open={showFieldEditor}
-          mode={isFieldEditorMode}
-          data={fieldEditorData}
-          onChange={setFieldEditorData}
-          onSave={saveField}
-          onClose={() => setShowFieldEditor(false)}
-        />
-
-        {/* Bill Preview Modal */}
-        <BillPreviewModal
-          open={showBillPreview}
-          template={previewTemplate || null}
-          onClose={() => setShowBillPreview(false)}
+          /* Field editor */
+          showFieldEditor={showFieldEditor}
+          fieldEditorMode={isFieldEditorMode as any}
+          fieldEditorData={fieldEditorData}
+          onChangeFieldEditorData={setFieldEditorData}
+          onSaveField={saveField}
+          onCloseFieldEditor={() => setShowFieldEditor(false)}
+          /* Bill preview */
+          showBillPreview={showBillPreview}
+          previewTemplate={(previewTemplate as any) || null}
+          onCloseBillPreview={() => setShowBillPreview(false)}
           onExportPDF={exportToPDF}
           onExportWord={exportToWord}
           onExportImage={exportAsImage}
           onPrint={printBill}
-          onEditTemplate={() => {
+          onEditTemplateFromPreview={() => {
             if (previewTemplate) {
               setCurrentTemplate(previewTemplate);
               setShowBillPreview(false);
             }
           }}
-          canvasRef={billCanvasRef as React.RefObject<HTMLCanvasElement>}
-        />
-
-        {/* Template Settings Modal */}
-        <TemplateSettingsModal
-          open={!!showTemplateSettings && !!currentTemplate}
-          template={currentTemplate}
-          onClose={() => setShowTemplateSettings(false)}
-          onUpdate={(patch) => {
+          billCanvasRef={billCanvasRef as React.RefObject<HTMLCanvasElement>}
+          /* Template settings */
+          showTemplateSettings={showTemplateSettings}
+          currentTemplate={currentTemplate as any}
+          onCloseTemplateSettings={() => setShowTemplateSettings(false)}
+          onUpdateTemplate={(patch) => {
             if (!currentTemplate) return;
             saveStateForUndo();
             const updatedTemplate = { ...currentTemplate, ...patch } as Template;
@@ -2585,7 +1957,7 @@ const exportCurrentCanvasToPdf = () => {
               prev.map((t) => (t.id === currentTemplate.id ? updatedTemplate : t))
             );
           }}
-          onDuplicate={() => {
+          onDuplicateTemplate={() => {
             if (!currentTemplate) return;
             saveStateForUndo();
             const templateCopy: Template = {
@@ -2603,50 +1975,7 @@ const exportCurrentCanvasToPdf = () => {
         />
 
         {/* Instructions */}
-        {!currentTemplate && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 border border-gray-200 dark:border-gray-700">
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
-              Advanced Features
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">🎨</span>
-                </div>
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                  Advanced Styling
-                </h4>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">
-                  Custom colors, fonts, borders, and positioning
-                </p>
-              </div>
-
-              <div className="text-center">
-                <div className="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">🖱️</span>
-                </div>
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                  Drag & Drop
-                </h4>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">
-                  Visual field positioning and resizing
-                </p>
-              </div>
-
-              <div className="text-center">
-                <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">⚙️</span>
-                </div>
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                  Professional
-                </h4>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">
-                  Create business-ready bill templates
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+        {!currentTemplate && <InstructionsSection />}
       </div>
     </div>
   );
