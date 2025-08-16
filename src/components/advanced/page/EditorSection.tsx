@@ -83,11 +83,11 @@ const EditorSection: React.FC<Props> = ({
   onUploadImage,
 }) => {
   return (
-    <div className="bg-white dark:bg-gray-8 00 rounded-xl shadow-lg p-4 md:p-8 border border-gray-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-8 border border-gray-200 dark:border-gray-700">
       <div className="flex items-start md:items-center justify-between mb-4 md:mb-6 flex-col md:flex-row gap-3 md:gap-0">
         <div>
           <h3 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">
-            {template.name}
+            {template.name || "Untitled Template"}
           </h3>
           <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
             {template.fields.length} fields • Advanced styling enabled

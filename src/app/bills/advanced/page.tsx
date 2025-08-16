@@ -16,47 +16,39 @@ import EditorSection from "@/components/advanced/page/EditorSection";
 import ModalsSection from "@/components/advanced/page/ModalsSection";
 import InstructionsSection from "@/components/advanced/page/InstructionsSection";
 import { makeDefaultSampleTemplate } from "@/lib/sampleTemplates";
-import { Template, TemplateField, SubElement } from "@/lib/advancedTypes";
+import { Template, TemplateField } from "@/lib/advancedTypes";
+import { generateRTFContent } from "@/lib/advancedUtils";
+import {
+  TEMPLATES_KEY,
+  LAST_TEMPLATE_KEY,
+  CUSTOM_INBOX_KEY,
+  MAX_TEMPLATES,
+  DEFAULT_TEMPLATE_ID,
+} from "@/lib/constants";
+import { makeEmptyTemplate, duplicateFromProfessional } from "@/lib/templateFactory";
+import { useTemplateCanvas } from "@/hooks/useTemplateCanvas";
 
 // Types moved to src/lib/advancedTypes.ts
 
-const TEMPLATES_KEY = "hrb_templates_v1";
-const LAST_TEMPLATE_KEY = "hrb_last_template_id_v1";
-const CUSTOM_INBOX_KEY = "hrb_custom_inbox_template_v1";
-const MAX_TEMPLATES = 4;
-// Protect the built-in default template (initialized with id "tpl-1") from auto-deletion
-const DEFAULT_TEMPLATE_ID = "tpl-1";
+// constants moved to src/lib/constants.ts
 
-// Keep at most MAX_TEMPLATES items; if over, remove the oldest non-default templates.
-// Returns the trimmed list and the removed templates.
-function enforceTemplateLimit(list: Template[]): { list: Template[]; removed: Template[] } {
-  if (list.length <= MAX_TEMPLATES) return { list, removed: [] };
-
-  // Sort by createdAt ascending (oldest first)
-  const sorted = [...list].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  const removed: Template[] = [];
-  while (sorted.length > MAX_TEMPLATES) {
-    // Find the oldest that is not the default; if all are default-only scenario, break
-    const idx = sorted.findIndex((t) => t.id !== DEFAULT_TEMPLATE_ID);
-    if (idx === -1) break;
-    removed.push(sorted.splice(idx, 1)[0]);
-  }
-  return { list: sorted, removed };
-}
+// enforceTemplateLimit moved to src/lib/advancedUtils.ts
 
 type ResizeHandle = null | "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
 
 export default function AdvancedBillGeneratorPage() {
   const router = useRouter();
   // Templates state (simple local list)
+  const initialSampleTemplate = useMemo(() => makeDefaultSampleTemplate(), []);
   const [templates, setTemplates] = useState<Template[]>(() => {
-    const sampleTemplate = makeDefaultSampleTemplate();
     // Important: don't read localStorage during initial render to avoid SSR/CSR mismatches
     // We'll load any stored templates after mount in a useEffect.
-    return [sampleTemplate];
+    return [initialSampleTemplate];
   });
 
-  const [currentTemplate, setCurrentTemplate] = useState<Template | null>(null);
+  const [currentTemplate, setCurrentTemplate] = useState<Template | null>(
+    () => initialSampleTemplate
+  );
   const [isEditing, setIsEditing] = useState(false);
   const [selectedField, setSelectedField] = useState<TemplateField | null>(
     null
@@ -66,32 +58,11 @@ export default function AdvancedBillGeneratorPage() {
   // New template chooser modal
   const [showNewTemplateChooser, setShowNewTemplateChooser] = useState(false);
 
-  // Canvas
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  // Canvas container sizing
   const [canvasContainerSize, setCanvasContainerSize] = useState<{
     width: number;
     height: number;
   } | null>(null);
-
-  // Drag to move
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({
-    x: 0,
-    y: 0,
-  });
-
-  // Resize state
-  const [isResizing, setIsResizing] = useState(false);
-  const [resizeHandle, setResizeHandle] = useState<ResizeHandle>(null);
-  const resizeOriginRef = useRef<{
-    startX: number;
-    startY: number;
-    field: TemplateField | null;
-  }>({
-    startX: 0,
-    startY: 0,
-    field: null,
-  });
 
   // Field editor modal
   const [showFieldEditor, setShowFieldEditor] = useState(false);
@@ -125,12 +96,12 @@ export default function AdvancedBillGeneratorPage() {
   const [showBillPreview, setShowBillPreview] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const billCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  // Canvas ref provided to the hook and EditorSection
+  const templateCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  // One-time data repair flag
+  const didRepairRef = useRef(false);
 
-  // Image cache for drawing
-  const imageCacheRef = useRef<Record<string, HTMLImageElement>>({});
-
-  // Double-click timer for inline editing
-  const doubleClickTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Canvas hook will be initialized after dependent functions are declared
 
   // Undo/Redo system
   const [undoStack, setUndoStack] = useState<Template[]>([]);
@@ -151,6 +122,37 @@ export default function AdvancedBillGeneratorPage() {
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // One-time repair: if any existing Professional templates have 0 fields, hydrate from default sample
+  useEffect(() => {
+    if (didRepairRef.current) return;
+    if (!templates || templates.length === 0) return;
+    const needsRepair = templates.some((t) => /professional/i.test(t.name) && (!t.fields || t.fields.length === 0));
+    if (!needsRepair) {
+      didRepairRef.current = true;
+      return;
+    }
+
+    const sample = makeDefaultSampleTemplate();
+    const repaired = templates.map((t) => {
+      if (/professional/i.test(t.name) && (!t.fields || t.fields.length === 0)) {
+        // Deep clone fields with fresh ids to avoid collisions
+        const newFields = sample.fields.map((f) => ({
+          ...f,
+          id: `${f.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        }));
+        return { ...t, fields: newFields } as Template;
+      }
+      return t;
+    });
+
+    setTemplates(repaired);
+    if (currentTemplate) {
+      const updatedCurrent = repaired.find((x) => x.id === currentTemplate.id) || null;
+      if (updatedCurrent) setCurrentTemplate(updatedCurrent);
+    }
+    didRepairRef.current = true;
+  }, [templates]);
 
   // Restore last-opened template or select first by default
   useEffect(() => {
@@ -424,7 +426,7 @@ export default function AdvancedBillGeneratorPage() {
   const startInlineEdit = (field: TemplateField) => {
     if (field.type === "image" || field.type === "signature") return;
 
-    const canvas = canvasRef.current;
+    const canvas = templateCanvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
@@ -437,10 +439,10 @@ export default function AdvancedBillGeneratorPage() {
     setInlineEditField(field);
     setInlineEditValue(field.value || "");
     setInlineEditPosition({
-      x: field.x * scaleX + rect.left,
-      y: field.y * scaleY + rect.top,
-      width: field.width * scaleX,
-      height: field.height * scaleY,
+      x: Math.round(field.x * scaleX + rect.left),
+      y: Math.round(field.y * scaleY + rect.top),
+      width: Math.round(field.width * scaleX),
+      height: Math.round(field.height * scaleY),
     });
   };
 
@@ -470,620 +472,7 @@ export default function AdvancedBillGeneratorPage() {
       }
     }
   }, [inlineEditField]);
-
-  // Render template to canvas
-  const renderTemplate = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !currentTemplate) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    // Improve sharpness: match backing store to displayed CSS size * DPR
-    const dpr = typeof window !== "undefined" ? Math.max(1, window.devicePixelRatio || 1) : 1;
-    // Compute display scale based on container size vs template size
-    const cssW = (canvasContainerSize?.width ?? currentTemplate.width);
-    const cssH = (canvasContainerSize?.height ?? currentTemplate.height);
-    const displayScaleX = cssW / currentTemplate.width;
-    const displayScaleY = cssH / currentTemplate.height;
-    // Because we keep aspect ratio, these should be equal, but be safe
-    const displayScale = Math.min(displayScaleX, displayScaleY);
-
-    // Set canvas CSS size explicitly
-    canvas.style.width = `${Math.round(currentTemplate.width * displayScale)}px`;
-    canvas.style.height = `${Math.round(currentTemplate.height * displayScale)}px`;
-
-    // Set backing resolution to CSS size * DPR
-    const desiredW = Math.max(1, Math.floor(currentTemplate.width * displayScale * dpr));
-    const desiredH = Math.max(1, Math.floor(currentTemplate.height * displayScale * dpr));
-    if (canvas.width !== desiredW || canvas.height !== desiredH) {
-      canvas.width = desiredW;
-      canvas.height = desiredH;
-    }
-    // Reset transform and scale drawing from template units to backing store
-    ctx.setTransform(displayScale * dpr, 0, 0, displayScale * dpr, 0, 0);
-    ctx.imageSmoothingEnabled = true;
-    try { (ctx as any).imageSmoothingQuality = "high"; } catch {}
-
-    // Helper: snap to device pixel grid for crisp 1px strokes
-    const px = 1 / (displayScale * dpr);
-    const snap = (v: number) => Math.round(v * displayScale * dpr) / (displayScale * dpr);
-    const strokeAlignedRect = (
-      x: number,
-      y: number,
-      w: number,
-      h: number,
-      lineWidth: number
-    ) => {
-      // Align the rect to pixel grid and offset by half the stroke width
-      const lw = Math.max(px, lineWidth);
-      ctx.lineWidth = lw;
-      const offs = lw / 2;
-      ctx.strokeRect(snap(x) + offs, snap(y) + offs, Math.max(px, snap(w) - lw), Math.max(px, snap(h) - lw));
-    };
-
-    // Clear using template-space units
-    ctx.clearRect(0, 0, currentTemplate.width, currentTemplate.height);
-
-    // Background
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, currentTemplate.width, currentTemplate.height);
-
-    // Draw fields
-    for (const field of currentTemplate.fields) {
-      // Box background
-      if (
-        !((field.type === "image" || field.type === "signature") && field.value)
-      ) {
-        ctx.fillStyle = field.backgroundColor || "#ffffff";
-        ctx.fillRect(field.x, field.y, field.width, field.height);
-        ctx.strokeStyle = field.borderColor || "#e5e7eb";
-        strokeAlignedRect(
-          field.x,
-          field.y,
-          field.width,
-          field.height,
-          (field.borderWidth || 1) * 1
-        );
-      }
-
-      if (field.type === "image" || field.type === "signature") {
-        if (field.value) {
-          const cacheKey = `${field.id}`;
-          const cached = imageCacheRef.current[cacheKey];
-          const drawImg = (img: HTMLImageElement) => {
-            // contain image within field while preserving aspect
-            const iw = img.naturalWidth || img.width;
-            const ih = img.naturalHeight || img.height;
-            const scale = Math.min(field.width / iw, field.height / ih);
-            const dw = Math.max(1, Math.floor(iw * scale));
-            const dh = Math.max(1, Math.floor(ih * scale));
-            const dx = field.x + (field.width - dw) / 2;
-            const dy = field.y + (field.height - dh) / 2;
-            ctx.drawImage(img, dx, dy, dw, dh);
-          };
-          if (cached) drawImg(cached);
-          else {
-            const img = new Image();
-            img.onload = () => {
-              imageCacheRef.current[cacheKey] = img;
-              drawImg(img);
-            };
-            img.src = field.value;
-          }
-        }
-      } else {
-        // Text-like fields
-        ctx.fillStyle = field.textColor || "#111827";
-        ctx.font = `${field.isItalic ? "italic " : ""}${
-          field.isBold ? "bold " : ""
-        }${field.fontSize || 16}px sans-serif`;
-        let tx = field.x + 8;
-        if (field.alignment === "center") tx = field.x + field.width / 2;
-        if (field.alignment === "right") tx = field.x + field.width - 8;
-        ctx.textAlign = field.alignment as CanvasTextAlign;
-        const content = field.value || field.placeholder || field.label || "";
-
-        // Handle multi-line text for textarea fields
-        if (field.type === "textarea" && content.includes("\n")) {
-          const pad = 4; // small vertical padding to avoid edge clipping
-          const lines = content.split("\n");
-          const fontSize = field.fontSize || 16;
-          // Use metrics for ascent/descent if available
-          const mProbe = ctx.measureText("Mg");
-          const ascent = (mProbe.actualBoundingBoxAscent ?? fontSize * 0.8);
-          const descent = (mProbe.actualBoundingBoxDescent ?? fontSize * 0.2);
-          const boxHeight = ascent + descent;
-          const lineHeight = Math.max(boxHeight * 1.1, fontSize * 1.15);
-          const totalTextHeight = lines.length * lineHeight;
-          let startY = field.y + Math.max(pad, (field.height - totalTextHeight) / 2);
-
-          ctx.textBaseline = "alphabetic";
-          lines.forEach((line, index) => {
-            const baselineY = startY + index * lineHeight + ascent;
-            // draw only if full glyph box fits
-            if (baselineY + (descent) <= field.y + field.height - pad) {
-              ctx.fillText(line, tx, baselineY, field.width - 16);
-            }
-          });
-        } else {
-          // Single line text using precise metrics centering
-          const pad = 4;
-          const fontSize = field.fontSize || 16;
-          const m = ctx.measureText(content || "Mg");
-          const ascent = (m.actualBoundingBoxAscent ?? fontSize * 0.8);
-          const descent = (m.actualBoundingBoxDescent ?? fontSize * 0.2);
-          const boxHeight = ascent + descent;
-          const baselineY = field.y + Math.max(pad, (field.height - boxHeight) / 2) + ascent;
-          ctx.textBaseline = "alphabetic";
-          ctx.fillText(content, tx, baselineY, field.width - 16);
-        }
-      }
-
-      // Draw sub-elements (labels, captions)
-      if (field.subElements && field.subElements.length > 0) {
-        field.subElements.forEach((subEl) => {
-          ctx.fillStyle = subEl.textColor;
-          ctx.font = `${subEl.isItalic ? "italic " : ""}${
-            subEl.isBold ? "bold " : ""
-          }${subEl.fontSize}px sans-serif`;
-          ctx.textBaseline = "top";
-          ctx.textAlign = "center";
-
-          let subX = field.x + field.width / 2 + subEl.offsetX;
-          let subY = field.y + subEl.offsetY;
-
-          switch (subEl.position) {
-            case "top":
-              subY = field.y - subEl.fontSize - 5 + subEl.offsetY;
-              break;
-            case "bottom":
-              subY = field.y + field.height + 5 + subEl.offsetY;
-              break;
-            case "left":
-              subX = field.x - 5 + subEl.offsetX;
-              subY = field.y + field.height / 2 + subEl.offsetY;
-              ctx.textAlign = "right";
-              ctx.textBaseline = "middle";
-              break;
-            case "right":
-              subX = field.x + field.width + 5 + subEl.offsetX;
-              subY = field.y + field.height / 2 + subEl.offsetY;
-              ctx.textAlign = "left";
-              ctx.textBaseline = "middle";
-              break;
-          }
-
-          ctx.fillText(subEl.content, subX, subY);
-        });
-      }
-
-      // Selection border and resize handles
-      if (selectedField?.id === field.id) {
-        ctx.strokeStyle = "#007bff";
-        ctx.lineWidth = 2;
-        ctx.setLineDash([5, 5]);
-
-        // For image/signature fields, draw selection around actual image content
-        if (
-          (field.type === "image" || field.type === "signature") &&
-          field.value
-        ) {
-          const cacheKey = `${field.id}`;
-          const cached = imageCacheRef.current[cacheKey];
-          if (cached) {
-            const iw = cached.naturalWidth || cached.width;
-            const ih = cached.naturalHeight || cached.height;
-            const scale = Math.min(field.width / iw, field.height / ih);
-            const dw = Math.max(1, Math.floor(iw * scale));
-            const dh = Math.max(1, Math.floor(ih * scale));
-            const dx = field.x + (field.width - dw) / 2;
-            const dy = field.y + (field.height - dh) / 2;
-            strokeAlignedRect(dx - 2, dy - 2, dw + 4, dh + 4, 2);
-          } else {
-            // If image not loaded yet, use full field area
-            strokeAlignedRect(field.x - 2, field.y - 2, field.width + 4, field.height + 4, 2);
-          }
-        } else {
-          strokeAlignedRect(field.x - 2, field.y - 2, field.width + 4, field.height + 4, 2);
-        }
-
-        ctx.setLineDash([]);
-        drawResizeHandles(ctx, field);
-      }
-    }
-  }, [currentTemplate, selectedField, canvasContainerSize]);
-
-  useEffect(() => {
-    renderTemplate();
-  }, [renderTemplate]);
-
-  // Helpers
-  const getMousePos = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current!;
-    const rect = canvas.getBoundingClientRect();
-
-    // Map from CSS pixels to template coordinate space (ignore DPR)
-    const tplW = currentTemplate?.width || rect.width;
-    const tplH = currentTemplate?.height || rect.height;
-    const scaleX = tplW / rect.width;
-    const scaleY = tplH / rect.height;
-
-    // Get mouse position relative to canvas (template units)
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
-
-    // Ensure coordinates are within template bounds
-    return {
-      x: Math.max(0, Math.min(x, tplW)),
-      y: Math.max(0, Math.min(y, tplH)),
-    };
-  };
-
-  function hitTest(px: number, py: number): TemplateField | null {
-    if (!currentTemplate) return null;
-    for (let i = currentTemplate.fields.length - 1; i >= 0; i--) {
-      const f = currentTemplate.fields[i];
-
-      // For image/signature fields with content, only hit test the actual image area
-      if ((f.type === "image" || f.type === "signature") && f.value) {
-        const cacheKey = `${f.id}`;
-        const cached = imageCacheRef.current[cacheKey];
-        if (cached) {
-          const iw = cached.naturalWidth || cached.width;
-          const ih = cached.naturalHeight || cached.height;
-          const scale = Math.min(f.width / iw, f.height / ih);
-          const dw = Math.max(1, Math.floor(iw * scale));
-          const dh = Math.max(1, Math.floor(ih * scale));
-          const dx = f.x + (f.width - dw) / 2;
-          const dy = f.y + (f.height - dh) / 2;
-
-          if (px >= dx && px <= dx + dw && py >= dy && py <= dy + dh) return f;
-        } else {
-          // If image not loaded yet, use full field area
-          if (
-            px >= f.x &&
-            px <= f.x + f.width &&
-            py >= f.y &&
-            py <= f.y + f.height
-          )
-            return f;
-        }
-      } else {
-        // For non-image fields, use full field area
-        if (
-          px >= f.x &&
-          px <= f.x + f.width &&
-          py >= f.y &&
-          py <= f.y + f.height
-        )
-          return f;
-      }
-    }
-    return null;
-  }
-
-  function drawResizeHandles(
-    ctx: CanvasRenderingContext2D,
-    field: TemplateField
-  ) {
-    const size = 6;
-    ctx.fillStyle = "#2563eb";
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 1;
-
-    let handleX = field.x;
-    let handleY = field.y;
-    let handleWidth = field.width;
-    let handleHeight = field.height;
-
-    // For image/signature fields with content, position handles around actual image
-    if ((field.type === "image" || field.type === "signature") && field.value) {
-      const cacheKey = `${field.id}`;
-      const cached = imageCacheRef.current[cacheKey];
-      if (cached) {
-        const iw = cached.naturalWidth || cached.width;
-        const ih = cached.naturalHeight || cached.height;
-        const scale = Math.min(field.width / iw, field.height / ih);
-        const dw = Math.max(1, Math.floor(iw * scale));
-        const dh = Math.max(1, Math.floor(ih * scale));
-        handleX = field.x + (field.width - dw) / 2;
-        handleY = field.y + (field.height - dh) / 2;
-        handleWidth = dw;
-        handleHeight = dh;
-      }
-    }
-
-    const centers = [
-      { x: handleX, y: handleY, key: "nw" },
-      { x: handleX + handleWidth / 2, y: handleY, key: "n" },
-      { x: handleX + handleWidth, y: handleY, key: "ne" },
-      { x: handleX, y: handleY + handleHeight / 2, key: "w" },
-      { x: handleX + handleWidth, y: handleY + handleHeight / 2, key: "e" },
-      { x: handleX, y: handleY + handleHeight, key: "sw" },
-      { x: handleX + handleWidth / 2, y: handleY + handleHeight, key: "s" },
-      { x: handleX + handleWidth, y: handleY + handleHeight, key: "se" },
-    ] as const;
-    centers.forEach((c) => {
-      ctx.fillRect(c.x - size / 2, c.y - size / 2, size, size);
-      ctx.strokeRect(c.x - size / 2, c.y - size / 2, size, size);
-    });
-  }
-
-  const getHandleAtPosition = (
-    px: number,
-    py: number,
-    field: TemplateField
-  ): ResizeHandle => {
-    const size = 6;
-
-    let handleX = field.x;
-    let handleY = field.y;
-    let handleWidth = field.width;
-    let handleHeight = field.height;
-
-    // For image/signature fields with content, use actual image dimensions for handle hit testing
-    if ((field.type === "image" || field.type === "signature") && field.value) {
-      const cacheKey = `${field.id}`;
-      const cached = imageCacheRef.current[cacheKey];
-      if (cached) {
-        const iw = cached.naturalWidth || cached.width;
-        const ih = cached.naturalHeight || cached.height;
-        const scale = Math.min(field.width / iw, field.height / ih);
-        const dw = Math.max(1, Math.floor(iw * scale));
-        const dh = Math.max(1, Math.floor(ih * scale));
-        handleX = field.x + (field.width - dw) / 2;
-        handleY = field.y + (field.height - dh) / 2;
-        handleWidth = dw;
-        handleHeight = dh;
-      }
-    }
-
-    const handles: {
-      key: Exclude<ResizeHandle, null>;
-      x: number;
-      y: number;
-    }[] = [
-      { key: "nw", x: handleX, y: handleY },
-      { key: "n", x: handleX + handleWidth / 2, y: handleY },
-      { key: "ne", x: handleX + handleWidth, y: handleY },
-      { key: "w", x: handleX, y: handleY + handleHeight / 2 },
-      { key: "e", x: handleX + handleWidth, y: handleY + handleHeight / 2 },
-      { key: "sw", x: handleX, y: handleY + handleHeight },
-      { key: "s", x: handleX + handleWidth / 2, y: handleY + handleHeight },
-      { key: "se", x: handleX + handleWidth, y: handleY + handleHeight },
-    ];
-    for (const h of handles) {
-      if (Math.abs(px - h.x) <= size && Math.abs(py - h.y) <= size)
-        return h.key;
-    }
-    return null;
-  };
-
-  // Touch event handlers
-  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const mouseEvent = {
-      ...e,
-      clientX: touch.clientX,
-      clientY: touch.clientY,
-      button: 0,
-      buttons: 1,
-    } as any;
-    handleMouseDown(mouseEvent);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const mouseEvent = {
-      ...e,
-      clientX: touch.clientX,
-      clientY: touch.clientY,
-      button: 0,
-      buttons: 1,
-    } as any;
-    handleMouseMove(mouseEvent);
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    handleMouseUp();
-  };
-
-  // Mouse/touch event handlers
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isEditing || !currentTemplate) return;
-
-    // Cancel inline editing if clicking elsewhere
-    if (inlineEditField) {
-      finishInlineEdit();
-      return;
-    }
-
-    const { x, y } = getMousePos(e);
-    const field = hitTest(x, y);
-
-    if (field) {
-      setSelectedField(field);
-      const handle = getHandleAtPosition(x, y, field);
-      if (handle) {
-        // Save state before resizing
-        saveStateForUndo();
-        setIsResizing(true);
-        setResizeHandle(handle);
-        resizeOriginRef.current = { startX: x, startY: y, field };
-      } else {
-        // Save state before dragging
-        saveStateForUndo();
-        setIsDragging(true);
-        setDragOffset({ x: x - field.x, y: y - field.y });
-      }
-    } else {
-      setSelectedField(null);
-    }
-  };
-
-  const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isEditing || !currentTemplate) return;
-    const { x: curX, y: curY } = getMousePos(event);
-
-    if (isDragging && selectedField) {
-      const nx = curX - dragOffset.x;
-      const ny = curY - dragOffset.y;
-      const canvasWidth = currentTemplate.width;
-      const canvasHeight = currentTemplate.height;
-
-      // Allow moving to canvas edges (0,0) and constrain within canvas bounds
-      const constrainedX = Math.max(
-        0,
-        Math.min(nx, canvasWidth - selectedField.width)
-      );
-      const constrainedY = Math.max(
-        0,
-        Math.min(ny, canvasHeight - selectedField.height)
-      );
-
-      // Only update if position actually changed
-      if (
-        selectedField.x !== constrainedX ||
-        selectedField.y !== constrainedY
-      ) {
-        updateField(
-          selectedField.id,
-          { x: constrainedX, y: constrainedY },
-          false
-        );
-      }
-      return;
-    }
-
-    if (isResizing && resizeOriginRef.current.field && resizeHandle) {
-      const orig = resizeOriginRef.current.field;
-      const dx = curX - resizeOriginRef.current.startX;
-      const dy = curY - resizeOriginRef.current.startY;
-
-      let newX = orig.x;
-      let newY = orig.y;
-      let newW = orig.width;
-      let newH = orig.height;
-
-      const minSize = 20;
-      const lockAspect =
-        !!orig.lockAspect &&
-        (orig.type === "image" || orig.type === "signature");
-      const aspect = orig.width / Math.max(1, orig.height);
-
-      const applyAspect = () => {
-        if (!lockAspect) return;
-        if (resizeHandle === "n" || resizeHandle === "s")
-          newW = Math.max(minSize, newH * aspect);
-        else if (resizeHandle === "e" || resizeHandle === "w")
-          newH = Math.max(minSize, newW / aspect);
-        else newH = Math.max(minSize, newW / aspect);
-      };
-
-      switch (resizeHandle) {
-        case "e":
-          newW = Math.max(minSize, orig.width + dx);
-          applyAspect();
-          break;
-        case "w":
-          newW = Math.max(minSize, orig.width - dx);
-          // Allow moving to left edge even if width hits minimum
-          if (newW === minSize) {
-            newX = Math.max(0, orig.x + orig.width - minSize);
-          } else {
-            newX = orig.x + dx;
-          }
-          applyAspect();
-          break;
-        case "s":
-          newH = Math.max(minSize, orig.height + dy);
-          applyAspect();
-          break;
-        case "n":
-          newH = Math.max(minSize, orig.height - dy);
-          newY = orig.y + dy;
-          applyAspect();
-          break;
-        case "se":
-          newW = Math.max(minSize, orig.width + dx);
-          newH = Math.max(minSize, orig.height + dy);
-          applyAspect();
-          break;
-        case "ne":
-          newW = Math.max(minSize, orig.width + dx);
-          newH = Math.max(minSize, orig.height - dy);
-          newY = orig.y + dy;
-          applyAspect();
-          break;
-        case "sw":
-          newW = Math.max(minSize, orig.width - dx);
-          newH = Math.max(minSize, orig.height + dy);
-          // Allow moving to left edge even if width hits minimum
-          if (newW === minSize) {
-            newX = Math.max(0, orig.x + orig.width - minSize);
-          } else {
-            newX = orig.x + dx;
-          }
-          applyAspect();
-          break;
-        case "nw":
-          newW = Math.max(minSize, orig.width - dx);
-          newH = Math.max(minSize, orig.height - dy);
-          // Allow moving to left edge even if width hits minimum
-          if (newW === minSize) {
-            newX = Math.max(0, orig.x + orig.width - minSize);
-          } else {
-            newX = orig.x + dx;
-          }
-          newY = orig.y + dy;
-          applyAspect();
-          break;
-      }
-
-      // Apply canvas boundary constraints for resize operations
-      const canvasWidth = currentTemplate.width;
-      const canvasHeight = currentTemplate.height;
-
-      // Ensure field stays within canvas bounds
-      const constrainedX = Math.max(
-        0,
-        Math.min(newX, canvasWidth - Math.max(minSize, newW))
-      );
-      const constrainedY = Math.max(
-        0,
-        Math.min(newY, canvasHeight - Math.max(minSize, newH))
-      );
-      const constrainedW = Math.min(
-        Math.max(minSize, newW),
-        canvasWidth - constrainedX
-      );
-      const constrainedH = Math.min(
-        Math.max(minSize, newH),
-        canvasHeight - constrainedY
-      );
-
-      updateField(
-        resizeOriginRef.current.field.id,
-        {
-          x: constrainedX,
-          y: constrainedY,
-          width: constrainedW,
-          height: constrainedH,
-        },
-        false
-      );
-      return;
-    }
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-    setIsResizing(false);
-    setResizeHandle(null);
-  };
+ 
 
   // Handle keyboard events for inline editing
   const handleInlineKeyDown = (e: React.KeyboardEvent) => {
@@ -1100,35 +489,30 @@ export default function AdvancedBillGeneratorPage() {
     }
   };
 
-  // Handle double-click for inline editing
-  const handleDoubleClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isEditing || !currentTemplate) return;
+  // Canvas click/double-click now handled by hook
 
-    const { x, y } = getMousePos(event);
-    const field = hitTest(x, y);
-
-    if (field && field.type !== "image" && field.type !== "signature") {
-      // Cancel any pending drag/resize operations
-      setIsDragging(false);
-      setIsResizing(false);
-      setResizeHandle(null);
-
-      // Clear the timer to prevent delayed drag behavior
-      if (doubleClickTimerRef.current) {
-        clearTimeout(doubleClickTimerRef.current);
-        doubleClickTimerRef.current = null;
-      }
-
-      startInlineEdit(field);
-    }
-  };
-
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isEditing || !currentTemplate) return;
-    const { x, y } = getMousePos(e);
-    const field = hitTest(x, y);
-    setSelectedField(field);
-  };
+  // Initialize canvas hook after dependent functions are declared
+  const {
+    onMouseDown,
+    onMouseMove,
+    onMouseUp,
+    onTouchStart,
+    onTouchMove,
+    onTouchEnd,
+    onDoubleClick,
+    onClick,
+  } = useTemplateCanvas({
+    currentTemplate,
+    isEditing,
+    selectedField,
+    setSelectedField,
+    updateField,
+    saveStateForUndo,
+    canvasContainerSize,
+    startInlineEdit,
+    canvasRef: templateCanvasRef,
+    inlineEditFieldId: inlineEditField?.id || null,
+  });
 
   // Create from our professional sample (duplicate first professional or fallback to defaults)
   // Insert helper: enforces MAX_TEMPLATES with a single confirmation, never deletes default,
@@ -1185,189 +569,26 @@ export default function AdvancedBillGeneratorPage() {
     const base = templates.find((t) => /professional/i.test(t.name)) || null;
     const idx = templates.length + 1;
     const newTemplate: Template = base
-      ? {
-          ...base,
-          id: `tpl-${Date.now()}`,
-          name: `${base.name} (${idx})`,
-          description: base.description,
-          width: base.width,
-          height: base.height,
-          createdAt: new Date(),
-          fields: base.fields.map((f) => ({
-            ...f,
-            id: `${f.id}-${Date.now()}-${Math.random()
-              .toString(36)
-              .slice(2, 8)}`,
-          })),
-        }
-      : {
-          id: `tpl-${idx}`,
-          name: `Professional Template ${idx}`,
-          description: "New professional template",
-          width: 800,
-          height: 1120,
-          createdAt: new Date(),
-          fields: [],
-        };
+      ? duplicateFromProfessional(base, idx)
+      : duplicateFromProfessional(makeDefaultSampleTemplate(), idx);
 
     // Before adding, enforce limit with confirmation
     insertTemplateWithLimit(newTemplate, { setAsCurrent: true, closeChooser: true });
   };
 
   const createNewTemplate = () => {
-    const idx = templates.length + 1;
-    const defaultFields: TemplateField[] = [
-      {
-        id: `fld-customer-${Date.now()}`,
-        label: "Customer Name",
-        value: "",
-        type: "text",
-        x: 100,
-        y: 100,
-        width: 200,
-        height: 40,
-        fontSize: 16,
-        isBold: false,
-        isItalic: false,
-        textColor: "#000000",
-        backgroundColor: "#ffffff",
-        borderColor: "#e5e7eb",
-        borderWidth: 1,
-        borderRadius: 6,
-        alignment: "left",
-        required: true,
-        subElements: [],
-      },
-      {
-        id: `fld-date-${Date.now() + 1}`,
-        label: "Date",
-        value: "",
-        type: "date",
-        x: 450,
-        y: 100,
-        width: 200,
-        height: 40,
-        fontSize: 16,
-        isBold: false,
-        isItalic: false,
-        textColor: "#000000",
-        backgroundColor: "#ffffff",
-        borderColor: "#e5e7eb",
-        borderWidth: 1,
-        borderRadius: 6,
-        alignment: "left",
-        required: true,
-        subElements: [],
-      },
-      {
-        id: `fld-amount-${Date.now() + 2}`,
-        label: "Total Amount",
-        value: "$0.00",
-        type: "amount",
-        x: 450,
-        y: 200,
-        width: 200,
-        height: 50,
-        fontSize: 18,
-        isBold: true,
-        isItalic: false,
-        textColor: "#059669",
-        backgroundColor: "#f0fdf4",
-        borderColor: "#059669",
-        borderWidth: 2,
-        borderRadius: 8,
-        alignment: "center",
-        required: true,
-        subElements: [],
-      },
-      {
-        id: `fld-description-${Date.now() + 3}`,
-        label: "Description",
-        value: "",
-        type: "textarea",
-        x: 100,
-        y: 300,
-        width: 600,
-        height: 100,
-        fontSize: 14,
-        isBold: false,
-        isItalic: false,
-        textColor: "#374151",
-        backgroundColor: "#ffffff",
-        borderColor: "#d1d5db",
-        borderWidth: 1,
-        borderRadius: 6,
-        alignment: "left",
-        required: false,
-        subElements: [],
-      },
-      {
-        id: `fld-signature-${Date.now() + 4}`,
-        label: "Signature",
-        value: "",
-        type: "signature",
-        x: 100,
-        y: 450,
-        width: 250,
-        height: 100,
-        fontSize: 14,
-        isBold: false,
-        isItalic: false,
-        textColor: "#000000",
-        backgroundColor: "#ffffff",
-        borderColor: "#9ca3af",
-        borderWidth: 1,
-        borderRadius: 6,
-        alignment: "center",
-        required: false,
-        lockAspect: true,
-        subElements: [
-          {
-            id: `sub-${Date.now() + 5}`,
-            type: "caption",
-            content: "Customer Signature",
-            position: "bottom",
-            offsetX: 0,
-            offsetY: 10,
-            fontSize: 12,
-            textColor: "#6b7280",
-            isBold: false,
-            isItalic: true,
-          },
-        ],
-      },
-    ];
-
-    const t: Template = {
-      id: `tpl-${idx}`,
-      name: `Template ${idx}`,
-      description: "New advanced template with default fields",
-      width: 800,
-      height: 1120,
-      createdAt: new Date(),
-      fields: defaultFields,
-    };
-    // Before adding, enforce limit with confirmation
-    insertTemplateWithLimit(t, { setAsCurrent: true, closeChooser: true });
-  };
+  const idx = templates.length + 1;
+  const t = makeEmptyTemplate(idx);
+  // Before adding, enforce limit with confirmation
+  insertTemplateWithLimit(t, { setAsCurrent: true, closeChooser: true });
+};
 
   // Wrapper for modal button: start an empty template and close chooser
   const createEmptyTemplate = () => {
     createNewTemplate();
   };
-  // Load stored templates on mount (client-only) to avoid SSR hydration mismatches
-  useEffect(() => {
-    try {
-      const stored = readArrayKey<any>(TEMPLATES_KEY);
-      if (stored && stored.length) {
-        const deserialized: Template[] = stored.map((t: any) => ({
-          ...t,
-          createdAt: t.createdAt ? new Date(t.createdAt) : new Date(),
-        }));
-        setTemplates(deserialized);
-      }
-    } catch {}
-  }, []);
+
+  // (Removed duplicate localStorage load effect)
   const openFieldEditor = (
     field?: TemplateField,
     mode: "create" | "edit" = "create"
@@ -1451,7 +672,7 @@ const saveTemplate = () => {
 };
 
 const exportCurrentCanvasToPdf = () => {
-  const canvas = canvasRef.current;
+  const canvas = templateCanvasRef.current;
   if (!canvas || !currentTemplate) return;
 
     // Render onto an offscreen canvas with generous padding to avoid edge clipping
@@ -1693,40 +914,6 @@ const exportCurrentCanvasToPdf = () => {
     }
   };
 
-  // Generate RTF document content (opens properly in Word)
-  const generateRTFContent = (template: Template) => {
-    // RTF header with font table
-    const rtfHeader = `{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}{\\f1 Arial;}}\n`;
-    const rtfFooter = `}`;
-
-    // Document title and header
-    let rtfBody = `\\f1\\fs28\\qc\\b ${template.name}\\b0\\par\n`;
-    rtfBody += `\\fs20\\qc Generated on ${new Date().toLocaleDateString()}\\par\n\\par\n\\par\n`;
-
-    // Add each field with proper formatting
-    template.fields.forEach((field) => {
-      const fieldValue = field.value || field.placeholder || "[Empty]";
-      // Escape RTF special characters
-      const escapedLabel = field.label
-        .replace(/\\/g, "\\\\")
-        .replace(/{/g, "\\{")
-        .replace(/}/g, "\\}");
-      const escapedValue = fieldValue
-        .replace(/\\/g, "\\\\")
-        .replace(/{/g, "\\{")
-        .replace(/}/g, "\\}")
-        .replace(/\n/g, "\\par\n");
-
-      rtfBody += `\\fs22\\b ${escapedLabel}:\\b0\\par\n`;
-      rtfBody += `\\fs20 ${escapedValue}\\par\n\\par\n`;
-    });
-
-    // Footer
-    rtfBody += `\\par\n\\fs16\\qc\\i This document was generated using Advanced Bill Generator\\i0\\par\n`;
-
-    return rtfHeader + rtfBody + rtfFooter;
-  };
-
   // Export as Image (PNG)
   const exportAsImage = async () => {
     if (!previewTemplate || !billCanvasRef.current) return;
@@ -1890,15 +1077,15 @@ const exportCurrentCanvasToPdf = () => {
             }}
             onSaveTemplate={saveTemplate}
             canvasContainerSize={canvasContainerSize as any}
-            canvasRef={canvasRef as any}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            onClick={handleCanvasClick}
-            onDoubleClick={handleDoubleClick}
+            canvasRef={templateCanvasRef as any}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            onClick={onClick}
+            onDoubleClick={onDoubleClick}
             inlineField={inlineEditField as any}
             inlinePosition={inlineEditPosition as any}
             inlineInputRef={inlineInputRef as any}
