@@ -18,6 +18,15 @@ import {
 } from "@/components/ui/card";
 import jsPDF from "jspdf";
 import { readArrayKey, writeArrayKey } from "@/lib/localStore";
+import NewTemplateChooserModal from "@/components/advanced/NewTemplateChooserModal";
+import FieldEditorModal from "@/components/advanced/FieldEditorModal";
+import BillPreviewModal from "@/components/advanced/BillPreviewModal";
+import TemplateSettingsModal from "@/components/advanced/TemplateSettingsModal";
+import FieldsPanel from "@/components/advanced/FieldsPanel";
+import TemplateList from "@/components/advanced/TemplateList";
+import InlineTextEditor from "@/components/advanced/InlineTextEditor";
+import ExportButtons from "@/components/advanced/ExportButtons";
+import TemplateCanvas from "@/components/advanced/TemplateCanvas";
 
 // Types
 interface SubElement {
@@ -2385,231 +2394,58 @@ const exportCurrentCanvasToPdf = () => {
         </div>
 
         {/* Template Management */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 mb-8 border border-gray-200 dark:border-gray-700">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-start md:justify-between mb-6 gap-3 md:gap-0 flex-wrap md:flex-nowrap">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-              Your Templates
-            </h2>
-            <div className="flex flex-wrap gap-2 md:gap-3 w-full md:w-auto">
-              <Button
-                className="w-full md:w-auto"
-                variant="secondary"
-                onClick={() => setShowTemplateSettings(true)}
-              >
-                ⚙️ Template Settings
-              </Button>
-              <Button
-                className="w-full md:w-auto"
-                variant="success"
-                onClick={() => setShowNewTemplateChooser(true)}
-              >
-                ✨ Create New Template
-              </Button>
-            </div>
+        <TemplateList
+          templates={templates as any}
+          editingTemplateId={editingTemplateId}
+          editingTemplateName={editingTemplateName}
+          onOpenSettings={() => setShowTemplateSettings(true)}
+          onCreateNew={() => setShowNewTemplateChooser(true)}
+          onStartRename={(id, name) => {
+            setEditingTemplateId(id);
+            setEditingTemplateName(name);
+          }}
+          onChangeRename={(value) => setEditingTemplateName(value)}
+          onCommitRename={(templateId, value) => {
+            setTemplates((prev) =>
+              prev.map((t) => (t.id === templateId ? { ...t, name: value } : t))
+            );
+            if (currentTemplate && currentTemplate.id === templateId) {
+              setCurrentTemplate({ ...currentTemplate, name: value });
+            }
+          }}
+          onCancelRename={() => {
+            setEditingTemplateId(null);
+            setEditingTemplateName("");
+          }}
+          onSetCurrent={(templateId) => {
+            const t = templates.find((x) => x.id === templateId);
+            if (t) setCurrentTemplate(t);
+          }}
+          onGenerate={(templateId) => {
+            const t = templates.find((x) => x.id === templateId);
+            if (t) generateBill(t);
+          }}
+          onDuplicate={(templateId) => {
+            const template = templates.find((t) => t.id === templateId);
+            if (!template) return;
+            const templateCopy: Template = {
+              ...template,
+              id: `tpl-${Date.now()}`,
+              name: `${template.name} (Copy)`,
+              createdAt: new Date(),
+            };
+            insertTemplateWithLimit(templateCopy, {
+              setAsCurrent: false,
+              closeChooser: false,
+            });
+          }}
+          onDelete={(templateId) => deleteTemplate(templateId)}
+        />
+        {templates.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            No templates yet. Create your first advanced template to get started!
           </div>
-
-          {/* Templates List */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {templates.map((template) => (
-              <Card
-                key={template.id}
-                className="group hover:shadow-lg transition-all duration-300 overflow-hidden"
-              >
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      {editingTemplateId === template.id ? (
-                        <input
-                          type="text"
-                          value={editingTemplateName}
-                          onChange={(e) =>
-                            setEditingTemplateName(e.target.value)
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              if (editingTemplateName.trim()) {
-                                setTemplates((prev) =>
-                                  prev.map((t) =>
-                                    t.id === template.id
-                                      ? {
-                                          ...t,
-                                          name: editingTemplateName.trim(),
-                                        }
-                                      : t
-                                  )
-                                );
-                                if (
-                                  currentTemplate &&
-                                  currentTemplate.id === template.id
-                                ) {
-                                  setCurrentTemplate((prev) =>
-                                    prev
-                                      ? {
-                                          ...prev,
-                                          name: editingTemplateName.trim(),
-                                        }
-                                      : null
-                                  );
-                                }
-                              }
-                              setEditingTemplateId(null);
-                              setEditingTemplateName("");
-                            } else if (e.key === "Escape") {
-                              setEditingTemplateId(null);
-                              setEditingTemplateName("");
-                            }
-                          }}
-                          className="text-xl font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-2 border-blue-500 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          autoFocus
-                        />
-                      ) : (
-                        <CardTitle className="mb-2 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
-                          {template.name}
-                        </CardTitle>
-                      )}
-                      <CardDescription>{template.description}</CardDescription>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      className="ml-3 p-2"
-                      title="Rename template"
-                      onClick={() => {
-                        setEditingTemplateId(template.id);
-                        setEditingTemplateName(template.name);
-                      }}
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-6 mb-6 text-sm text-gray-500 dark:text-gray-400">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <span className="font-medium">
-                        {template.fields.length} fields
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span>
-                        Created{" "}
-                        {new Date(template.createdAt)
-                          .toISOString()
-                          .slice(0, 10)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button onClick={() => setCurrentTemplate(template)}>
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
-                      Edit
-                    </Button>
-                    <Button
-                      variant="gradient"
-                      onClick={() => generateBill(template)}
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
-                      Generate
-                    </Button>
-                    <Button
-                      variant="success"
-                      onClick={() => {
-                        const templateCopy: Template = {
-                          ...template,
-                          id: `tpl-${Date.now()}`,
-                          name: `${template.name} (Copy)`,
-                          createdAt: new Date(),
-                        };
-                        insertTemplateWithLimit(templateCopy, {
-                          setAsCurrent: false,
-                          closeChooser: false,
-                        });
-                      }}
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                        />
-                      </svg>
-                      Duplicate
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={() => deleteTemplate(template.id)}
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                      Delete
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {templates.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No templates yet. Create your first advanced template to get
-              started!
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Template Editor */}
         {currentTemplate && (
@@ -2626,1283 +2462,145 @@ const exportCurrentCanvasToPdf = () => {
               </div>
               <div className="flex flex-wrap gap-2 md:gap-3 w-full md:w-auto">
                 {!isEditing ? (
-                  <Button
-                    className="w-full md:w-auto"
-                    onClick={() => setIsEditing(true)}
-                  >
+                  <Button className="w-full md:w-auto" onClick={() => setIsEditing(true)}>
                     ✏️ Edit Template
                   </Button>
                 ) : (
-                  <>
-                    <Button
-                      className="w-full sm:w-auto"
-                      onClick={() => openFieldEditor(undefined, "create")}
-                    >
-                      ➕ Add Field
-                    </Button>
-                    <Button
-                      className="w-full sm:w-auto"
-                      variant="gradient"
-                      onClick={exportCurrentCanvasToPdf}
-                    >
-                      🖨️ Export PDF
-                    </Button>
-                    <Button
-                      className="w-full sm:w-auto"
-                      variant="secondary"
-                      onClick={() => currentTemplate && exportTemplateJson(currentTemplate)}
-                    >
-                      ⬇️ Export JSON
-                    </Button>
-                    <Button
-                      className="w-full sm:w-auto"
-                      variant="success"
-                      onClick={() => {
-                        if (!currentTemplate) return;
-                        try {
-                          const serializable: any = {
-                            ...currentTemplate,
-                            createdAt:
-                              currentTemplate.createdAt instanceof Date
-                                ? currentTemplate.createdAt.toISOString()
-                                : (currentTemplate as any).createdAt,
-                          };
-                          if (typeof window !== "undefined") {
-                            window.localStorage.setItem(CUSTOM_INBOX_KEY, JSON.stringify(serializable));
-                          }
-                          router.push("/bills/custom");
-                        } catch {}
-                      }}
-                    >
-                      🚚 Use in Custom Template
-                    </Button>
-                    <Button
-                      className="w-full sm:w-auto"
-                      variant="success"
-                      onClick={saveTemplate}
-                    >
-                      💾 Save Template
-                    </Button>
-                  </>
+                  <ExportButtons
+                    onAddField={() => openFieldEditor(undefined, "create")}
+                    onExportPdf={exportCurrentCanvasToPdf}
+                    onExportJson={() => currentTemplate && exportTemplateJson(currentTemplate)}
+                    onUseInCustom={() => {
+                      if (!currentTemplate) return;
+                      try {
+                        const serializable: any = {
+                          ...currentTemplate,
+                          createdAt:
+                            currentTemplate.createdAt instanceof Date
+                              ? currentTemplate.createdAt.toISOString()
+                              : (currentTemplate as any).createdAt,
+                        };
+                        if (typeof window !== "undefined") {
+                          window.localStorage.setItem(CUSTOM_INBOX_KEY, JSON.stringify(serializable));
+                        }
+                        router.push("/bills/custom");
+                      } catch {}
+                    }}
+                    onSaveTemplate={saveTemplate}
+                  />
                 )}
               </div>
             </div>
 
             {/* Template Canvas */}
-            <div className="flex justify-center mb-4 md:mb-6 overflow-auto px-2">
-              <div
-                className="relative bg-white border border-gray-200 rounded-md shadow-sm max-w-full"
-                style={{
-                  width: canvasContainerSize?.width || currentTemplate.width,
-                  height: canvasContainerSize?.height || currentTemplate.height,
-                }}
-              >
-                <canvas
-                  ref={canvasRef}
-                  width={currentTemplate.width}
-                  height={currentTemplate.height}
-                  className="absolute top-0 left-0 w-full h-full border-0 md:border-2 md:border-gray-300 rounded-md"
-                  onMouseDown={handleMouseDown}
-                  onMouseMove={handleMouseMove}
-                  onMouseUp={handleMouseUp}
-                  onTouchStart={handleTouchStart}
-                  onTouchMove={handleTouchMove}
-                  onTouchEnd={handleTouchEnd}
-                  onClick={handleCanvasClick}
-                  onDoubleClick={handleDoubleClick}
-                  style={{
-                    cursor: isEditing ? "move" : "default",
-                    touchAction: "none",
-                  }}
-                />
-
-                {/* Inline Text Editing Overlay */}
-                {inlineEditField && inlineEditPosition && (
-                  <div
-                    className="fixed z-50"
-                    style={{
-                      left: typeof window !== "undefined" ? Math.max(8, Math.min(inlineEditPosition.x, window.innerWidth - inlineEditPosition.width - 8)) : inlineEditPosition.x,
-                      top: typeof window !== "undefined" ? Math.max(8, Math.min(inlineEditPosition.y, window.innerHeight - inlineEditPosition.height - 8)) : inlineEditPosition.y,
-                      width: typeof window !== "undefined" ? Math.min(inlineEditPosition.width, window.innerWidth - 16) : inlineEditPosition.width,
-                      height: typeof window !== "undefined" ? Math.min(inlineEditPosition.height, window.innerHeight - 16) : inlineEditPosition.height,
-                    }}
-                  >
-                    {inlineEditField.type === "textarea" ? (
-                      <textarea
-                        ref={
-                          inlineInputRef as React.RefObject<HTMLTextAreaElement>
-                        }
-                        value={inlineEditValue}
-                        onChange={(e) => setInlineEditValue(e.target.value)}
-                        onKeyDown={handleInlineKeyDown}
-                        onBlur={finishInlineEdit}
-                        className="w-full h-full p-2 text-sm border-2 border-blue-500 rounded resize-none touch-manipulation"
-                        style={{
-                          fontSize: `${
-                            (inlineEditField.fontSize || 16) *
-                            (inlineEditPosition.width / inlineEditField.width)
-                          }px`,
-                          fontWeight: inlineEditField.isBold
-                            ? "bold"
-                            : "normal",
-                          fontStyle: inlineEditField.isItalic
-                            ? "italic"
-                            : "normal",
-                          textAlign: inlineEditField.alignment as any,
-                          color: inlineEditField.textColor || "#111827",
-                          backgroundColor:
-                            inlineEditField.backgroundColor || "#ffffff",
-                        }}
-                      />
-                    ) : (
-                      <input
-                        ref={
-                          inlineInputRef as React.RefObject<HTMLInputElement>
-                        }
-                        type="text"
-                        value={inlineEditValue}
-                        onChange={(e) => setInlineEditValue(e.target.value)}
-                        onKeyDown={handleInlineKeyDown}
-                        onBlur={finishInlineEdit}
-                        className="w-full h-full p-2 text-sm border-2 border-blue-500 rounded touch-manipulation"
-                        style={{
-                          fontSize: `${
-                            (inlineEditField.fontSize || 16) *
-                            (inlineEditPosition.width / inlineEditField.width)
-                          }px`,
-                          fontWeight: inlineEditField.isBold
-                            ? "bold"
-                            : "normal",
-                          fontStyle: inlineEditField.isItalic
-                            ? "italic"
-                            : "normal",
-                          textAlign: inlineEditField.alignment as any,
-                          color: inlineEditField.textColor || "#111827",
-                          backgroundColor:
-                            inlineEditField.backgroundColor || "#ffffff",
-                        }}
-                      />
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+            <TemplateCanvas
+              templateSize={{
+                width: currentTemplate.width,
+                height: currentTemplate.height,
+              }}
+              containerSize={canvasContainerSize as any}
+              canvasRef={canvasRef as any}
+              isEditing={isEditing}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onClick={handleCanvasClick}
+              onDoubleClick={handleDoubleClick}
+              inlineField={inlineEditField as any}
+              inlinePosition={inlineEditPosition as any}
+              inlineInputRef={inlineInputRef as any}
+              inlineValue={inlineEditValue}
+              onInlineChange={setInlineEditValue}
+              onInlineKeyDown={handleInlineKeyDown as any}
+              onInlineBlur={finishInlineEdit}
+            />
 
             {/* Fields Panel */}
-            {isEditing && (
-              <div className="mt-4 md:mt-6">
-                <div className="flex items-start md:items-center justify-between mb-3 md:mb-4 gap-2 md:gap-0 flex-col md:flex-row">
-                  <h4 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">
-                    Template Fields ({currentTemplate.fields.length})
-                  </h4>
-                  <Button
-                    className="w-full md:w-auto"
-                    onClick={() => openFieldEditor(undefined, "create")}
-                  >
-                    ➕ Add New Field
-                  </Button>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 max-h-96 overflow-y-auto touch-pan-y">
-                  {currentTemplate.fields.map((field) => (
-                    <div
-                      key={field.id}
-                      className={`p-3 md:p-4 border-2 rounded-lg transition-all duration-300 touch-manipulation ${
-                        selectedField?.id === field.id
-                          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                          : "border-gray-200 dark:border-gray-700"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
-                          {field.label}
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {field.type}
-                        </span>
-                      </div>
-
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-2 break-words">
-                        {field.type === "image" ||
-                        field.type === "signature" ? (
-                          <span className="italic">
-                            {field.value ? "Image selected" : "No image"}
-                          </span>
-                        ) : (
-                          field.value
-                        )}
-                      </div>
-
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-3 space-y-1">
-                        <div>
-                          Position: ({field.x}, {field.y})
-                        </div>
-                        <div>
-                          Size: {field.width} × {field.height}
-                        </div>
-                        <div>
-                          Font: {field.fontSize}px {field.isBold ? "Bold" : ""}{" "}
-                          {field.isItalic ? "Italic" : ""}
-                        </div>
-                        <div>Align: {field.alignment}</div>
-                      </div>
-
-                      <div className="flex gap-2 flex-wrap">
-                        <Button
-                          className="flex-1 sm:flex-none"
-                          size="sm"
-                          onClick={() => openFieldEditor(field, "edit")}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => {
-                            saveStateForUndo();
-                            deleteField(field.id);
-                          }}
-                        >
-                          Delete
-                        </Button>
-                        {(field.type === "image" ||
-                          field.type === "signature") && (
-                          <label className="bg-purple-600 hover:bg-purple-700 text-white text-xs py-1 px-2 rounded cursor-pointer transition-colors duration-300">
-                            Upload Image
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) onUploadImageForField(field.id, file);
-                                e.currentTarget.value = "";
-                              }}
-                            />
-                          </label>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {isEditing && currentTemplate && (
+              <FieldsPanel
+                fields={currentTemplate.fields as any}
+                selectedFieldId={selectedField?.id || null}
+                onAddField={() => openFieldEditor(undefined, "create")}
+                onEditField={(f) => openFieldEditor(f as any, "edit")}
+                onDeleteField={(id) => {
+                  saveStateForUndo();
+                  deleteField(id);
+                }}
+                onUploadImage={(fieldId, file) => onUploadImageForField(fieldId, file)}
+              />
             )}
           </div>
         )}
 
         {/* New Template Chooser Modal */}
-        {showNewTemplateChooser && (
-          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-0 md:p-6">
-            <div className="bg-white dark:bg-gray-800 rounded-none md:rounded-xl p-4 md:p-6 w-full h-full md:h-auto md:max-w-2xl md:mx-4 overflow-y-auto">
-              <div className="flex items-start justify-between mb-4">
-                <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-                  Create New Template
-                </h3>
-                <button
-                  aria-label="Close chooser"
-                  className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
-                  onClick={() => setShowNewTemplateChooser(false)}
-                >
-                  ✖
-                </button>
-              </div>
-              <p className="text-gray-600 dark:text-gray-300 mb-6">
-                Choose how you want to start your template.
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="border-2 hover:border-blue-500 transition-colors">
-                  <CardHeader>
-                    <CardTitle>Professional Template</CardTitle>
-                    <CardDescription>
-                      Start from a polished, pre-filled invoice layout
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                      Includes company header, client details, itemized table,
-                      and payment terms.
-                    </p>
-                    <Button className="w-full" onClick={createFromProfessional}>
-                      Use Professional
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-2 hover:border-green-500 transition-colors">
-                  <CardHeader>
-                    <CardTitle>Empty Canvas</CardTitle>
-                    <CardDescription>
-                      Start from scratch with a blank page
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                      Perfect if you want full control over layout and fields.
-                    </p>
-                    <Button
-                      className="w-full"
-                      variant="secondary"
-                      onClick={createEmptyTemplate}
-                    >
-                      Start Empty
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="mt-6 flex justify-end">
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowNewTemplateChooser(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+        <NewTemplateChooserModal
+          open={showNewTemplateChooser}
+          onClose={() => setShowNewTemplateChooser(false)}
+          onCreateProfessional={createFromProfessional}
+          onCreateEmpty={createEmptyTemplate}
+        />
 
         {/* Field Editor Modal */}
-        {showFieldEditor && (
-          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-0 md:p-6">
-            <div className="bg-white dark:bg-gray-800 rounded-none md:rounded-xl p-4 md:p-6 w-full h-full md:h-auto md:max-h-[90vh] md:max-w-2xl md:mx-4 overflow-y-auto">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                {isFieldEditorMode === "create"
-                  ? "Add New Field"
-                  : "Edit Field"}
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Basic Settings */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Field Label
-                    </label>
-                    <input
-                      type="text"
-                      value={fieldEditorData.label || ""}
-                      onChange={(e) =>
-                        setFieldEditorData({
-                          ...fieldEditorData,
-                          label: e.target.value,
-                        })
-                      }
-                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                      placeholder="Enter field label"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Field Type
-                    </label>
-                    <select
-                      value={fieldEditorData.type || "text"}
-                      onChange={(e) =>
-                        setFieldEditorData({
-                          ...fieldEditorData,
-                          type: e.target.value as TemplateField["type"],
-                        })
-                      }
-                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    >
-                      <option value="text">Text</option>
-                      <option value="number">Number</option>
-                      <option value="date">Date</option>
-                      <option value="amount">Amount</option>
-                      <option value="textarea">Text Area</option>
-                      <option value="select">Select</option>
-                      <option value="image">Image</option>
-                      <option value="signature">Signature</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Default Value
-                    </label>
-                    {fieldEditorData.type === "image" ||
-                    fieldEditorData.type === "signature" ? (
-                      <div className="space-y-3">
-                        {fieldEditorData.value ? (
-                          <div className="flex items-start gap-3">
-                            <img
-                              src={fieldEditorData.value}
-                              alt="preview"
-                              className="w-32 h-20 object-contain rounded border"
-                            />
-                            <div className="flex flex-col gap-2">
-                              <button
-                                type="button"
-                                className="bg-red-600 hover:bg-red-700 text-white text-xs py-1 px-2 rounded"
-                                onClick={() =>
-                                  setFieldEditorData({
-                                    ...fieldEditorData,
-                                    value: "",
-                                  })
-                                }
-                              >
-                                Remove Image
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            No image selected
-                          </div>
-                        )}
-                        <label className="inline-block bg-purple-600 hover:bg-purple-700 text-white text-sm py-2 px-3 rounded cursor-pointer">
-                          Choose Image
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={async (e) => {
-                              const file = e.target.files?.[0];
-                              if (!file) return;
-                              const reader = new FileReader();
-                              reader.onload = () =>
-                                setFieldEditorData({
-                                  ...fieldEditorData,
-                                  value: reader.result as string,
-                                });
-                              reader.readAsDataURL(file);
-                              e.currentTarget.value = "";
-                            }}
-                          />
-                        </label>
-                        <div className="text-[11px] text-gray-500 dark:text-gray-400">
-                          Supported: PNG, JPG, JPEG, WEBP
-                        </div>
-                      </div>
-                    ) : fieldEditorData.type === "textarea" ? (
-                      <textarea
-                        value={fieldEditorData.value || ""}
-                        onChange={(e) =>
-                          setFieldEditorData({
-                            ...fieldEditorData,
-                            value: e.target.value,
-                          })
-                        }
-                        className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 min-h-[100px] resize-vertical"
-                        placeholder="Enter default value (use \n for line breaks)"
-                        rows={4}
-                      />
-                    ) : (
-                      <input
-                        type="text"
-                        value={fieldEditorData.value || ""}
-                        onChange={(e) =>
-                          setFieldEditorData({
-                            ...fieldEditorData,
-                            value: e.target.value,
-                          })
-                        }
-                        className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                        placeholder="Enter default value"
-                      />
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Alignment
-                    </label>
-                    <select
-                      value={fieldEditorData.alignment || "left"}
-                      onChange={(e) =>
-                        setFieldEditorData({
-                          ...fieldEditorData,
-                          alignment: e.target.value as any,
-                        })
-                      }
-                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    >
-                      <option value="left">Left</option>
-                      <option value="center">Center</option>
-                      <option value="right">Right</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Position & Size */}
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        X Position
-                      </label>
-                      <input
-                        type="number"
-                        value={fieldEditorData.x || 100}
-                        onChange={(e) =>
-                          setFieldEditorData({
-                            ...fieldEditorData,
-                            x: parseInt(e.target.value),
-                          })
-                        }
-                        className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Y Position
-                      </label>
-                      <input
-                        type="number"
-                        value={fieldEditorData.y || 100}
-                        onChange={(e) =>
-                          setFieldEditorData({
-                            ...fieldEditorData,
-                            y: parseInt(e.target.value),
-                          })
-                        }
-                        className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Width
-                      </label>
-                      <input
-                        type="number"
-                        value={fieldEditorData.width || 150}
-                        onChange={(e) =>
-                          setFieldEditorData({
-                            ...fieldEditorData,
-                            width: parseInt(e.target.value),
-                          })
-                        }
-                        className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Height
-                      </label>
-                      <input
-                        type="number"
-                        value={fieldEditorData.height || 40}
-                        onChange={(e) =>
-                          setFieldEditorData({
-                            ...fieldEditorData,
-                            height: parseInt(e.target.value),
-                          })
-                        }
-                        className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                      />
-                    </div>
-                  </div>
-
-                  {(fieldEditorData.type === "image" ||
-                    fieldEditorData.type === "signature") && (
-                    <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300">
-                      <input
-                        type="checkbox"
-                        checked={fieldEditorData.lockAspect ?? true}
-                        onChange={(e) =>
-                          setFieldEditorData({
-                            ...fieldEditorData,
-                            lockAspect: e.target.checked,
-                          })
-                        }
-                        className="mr-2"
-                      />
-                      Lock Aspect Ratio
-                    </label>
-                  )}
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Font Size
-                    </label>
-                    <input
-                      type="number"
-                      value={fieldEditorData.fontSize || 16}
-                      onChange={(e) =>
-                        setFieldEditorData({
-                          ...fieldEditorData,
-                          fontSize: parseInt(e.target.value),
-                        })
-                      }
-                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Sub-elements (Labels/Captions) */}
-              <div className="mt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Labels & Captions (
-                    {(fieldEditorData.subElements || []).length})
-                  </h4>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newSubElement: SubElement = {
-                        id: `sub-${Date.now()}`,
-                        type: "caption",
-                        content: "New Label",
-                        position: "bottom",
-                        offsetX: 0,
-                        offsetY: 0,
-                        fontSize: 12,
-                        textColor: "#6b7280",
-                        isBold: false,
-                        isItalic: false,
-                      };
-                      setFieldEditorData({
-                        ...fieldEditorData,
-                        subElements: [
-                          ...(fieldEditorData.subElements || []),
-                          newSubElement,
-                        ],
-                      });
-                    }}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm py-1 px-3 rounded transition-colors duration-300"
-                  >
-                    + Add Label
-                  </button>
-                </div>
-
-                <div className="space-y-3 max-h-48 overflow-y-auto">
-                  {(fieldEditorData.subElements || []).map((subEl, index) => (
-                    <div
-                      key={subEl.id}
-                      className="p-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700"
-                    >
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Content
-                          </label>
-                          <input
-                            type="text"
-                            value={subEl.content}
-                            onChange={(e) => {
-                              const updated = [
-                                ...(fieldEditorData.subElements || []),
-                              ];
-                              updated[index] = {
-                                ...subEl,
-                                content: e.target.value,
-                              };
-                              setFieldEditorData({
-                                ...fieldEditorData,
-                                subElements: updated,
-                              });
-                            }}
-                            className="w-full text-sm border border-gray-300 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                            placeholder="Label text"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Position
-                          </label>
-                          <select
-                            value={subEl.position}
-                            onChange={(e) => {
-                              const updated = [
-                                ...(fieldEditorData.subElements || []),
-                              ];
-                              updated[index] = {
-                                ...subEl,
-                                position: e.target
-                                  .value as SubElement["position"],
-                              };
-                              setFieldEditorData({
-                                ...fieldEditorData,
-                                subElements: updated,
-                              });
-                            }}
-                            className="w-full text-sm border border-gray-300 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                          >
-                            <option value="top">Top</option>
-                            <option value="bottom">Bottom</option>
-                            <option value="left">Left</option>
-                            <option value="right">Right</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Font Size
-                          </label>
-                          <input
-                            type="number"
-                            value={subEl.fontSize}
-                            onChange={(e) => {
-                              const updated = [
-                                ...(fieldEditorData.subElements || []),
-                              ];
-                              updated[index] = {
-                                ...subEl,
-                                fontSize: parseInt(e.target.value) || 12,
-                              };
-                              setFieldEditorData({
-                                ...fieldEditorData,
-                                subElements: updated,
-                              });
-                            }}
-                            className="w-full text-sm border border-gray-300 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                            min="8"
-                            max="24"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Color
-                          </label>
-                          <input
-                            type="color"
-                            value={subEl.textColor}
-                            onChange={(e) => {
-                              const updated = [
-                                ...(fieldEditorData.subElements || []),
-                              ];
-                              updated[index] = {
-                                ...subEl,
-                                textColor: e.target.value,
-                              };
-                              setFieldEditorData({
-                                ...fieldEditorData,
-                                subElements: updated,
-                              });
-                            }}
-                            className="w-full h-8 border border-gray-300 rounded"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between mt-2">
-                        <div className="flex items-center space-x-3">
-                          <label className="flex items-center text-xs text-gray-700 dark:text-gray-300">
-                            <input
-                              type="checkbox"
-                              checked={subEl.isBold}
-                              onChange={(e) => {
-                                const updated = [
-                                  ...(fieldEditorData.subElements || []),
-                                ];
-                                updated[index] = {
-                                  ...subEl,
-                                  isBold: e.target.checked,
-                                };
-                                setFieldEditorData({
-                                  ...fieldEditorData,
-                                  subElements: updated,
-                                });
-                              }}
-                              className="mr-1"
-                            />
-                            Bold
-                          </label>
-                          <label className="flex items-center text-xs text-gray-700 dark:text-gray-300">
-                            <input
-                              type="checkbox"
-                              checked={subEl.isItalic}
-                              onChange={(e) => {
-                                const updated = [
-                                  ...(fieldEditorData.subElements || []),
-                                ];
-                                updated[index] = {
-                                  ...subEl,
-                                  isItalic: e.target.checked,
-                                };
-                                setFieldEditorData({
-                                  ...fieldEditorData,
-                                  subElements: updated,
-                                });
-                              }}
-                              className="mr-1"
-                            />
-                            Italic
-                          </label>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = (
-                              fieldEditorData.subElements || []
-                            ).filter((_, i) => i !== index);
-                            setFieldEditorData({
-                              ...fieldEditorData,
-                              subElements: updated,
-                            });
-                          }}
-                          className="bg-red-600 hover:bg-red-700 text-white text-xs py-1 px-2 rounded transition-colors duration-300"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-
-                  {(!fieldEditorData.subElements ||
-                    fieldEditorData.subElements.length === 0) && (
-                    <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
-                      No labels or captions added yet. Click "Add Label" to get
-                      started.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Styling Options */}
-              <div className="mt-6">
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Styling Options
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Text Color
-                    </label>
-                    <input
-                      type="color"
-                      value={fieldEditorData.textColor || "#000000"}
-                      onChange={(e) =>
-                        setFieldEditorData({
-                          ...fieldEditorData,
-                          textColor: e.target.value,
-                        })
-                      }
-                      className="w-full h-10 border border-gray-300 rounded"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Background Color
-                    </label>
-                    <input
-                      type="color"
-                      value={fieldEditorData.backgroundColor || "#ffffff"}
-                      onChange={(e) =>
-                        setFieldEditorData({
-                          ...fieldEditorData,
-                          backgroundColor: e.target.value,
-                        })
-                      }
-                      className="w-full h-10 border border-gray-300 rounded"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Border Color
-                    </label>
-                    <input
-                      type="color"
-                      value={fieldEditorData.borderColor || "#e5e7eb"}
-                      onChange={(e) =>
-                        setFieldEditorData({
-                          ...fieldEditorData,
-                          borderColor: e.target.value,
-                        })
-                      }
-                      className="w-full h-10 border border-gray-300 rounded"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Border Width
-                    </label>
-                    <input
-                      type="number"
-                      value={fieldEditorData.borderWidth || 1}
-                      onChange={(e) =>
-                        setFieldEditorData({
-                          ...fieldEditorData,
-                          borderWidth: parseInt(e.target.value),
-                        })
-                      }
-                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Border Radius
-                    </label>
-                    <input
-                      type="number"
-                      value={fieldEditorData.borderRadius || 6}
-                      onChange={(e) =>
-                        setFieldEditorData({
-                          ...fieldEditorData,
-                          borderRadius: parseInt(e.target.value),
-                        })
-                      }
-                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    />
-                  </div>
-
-                  <div className="flex items-center space-x-4">
-                    <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300">
-                      <input
-                        type="checkbox"
-                        checked={fieldEditorData.isBold || false}
-                        onChange={(e) =>
-                          setFieldEditorData({
-                            ...fieldEditorData,
-                            isBold: e.target.checked,
-                          })
-                        }
-                        className="mr-2"
-                      />
-                      Bold
-                    </label>
-                    <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300">
-                      <input
-                        type="checkbox"
-                        checked={fieldEditorData.isItalic || false}
-                        onChange={(e) =>
-                          setFieldEditorData({
-                            ...fieldEditorData,
-                            isItalic: e.target.checked,
-                          })
-                        }
-                        className="mr-2"
-                      />
-                      Italic
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={saveField}
-                  className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-300"
-                >
-                  Save Field
-                </button>
-                <button
-                  onClick={() => setShowFieldEditor(false)}
-                  className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-300"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <FieldEditorModal
+          open={showFieldEditor}
+          mode={isFieldEditorMode}
+          data={fieldEditorData}
+          onChange={setFieldEditorData}
+          onSave={saveField}
+          onClose={() => setShowFieldEditor(false)}
+        />
 
         {/* Bill Preview Modal */}
-        {showBillPreview && previewTemplate && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                    Bill Preview - {previewTemplate.name}
-                  </h3>
-                  <button
-                    onClick={() => setShowBillPreview(false)}
-                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl"
-                  >
-                    ×
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-3 mt-4">
-                  <button
-                    onClick={exportToPDF}
-                    className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition-colors duration-300 flex items-center gap-2"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                    Export PDF
-                  </button>
-                  <button
-                    onClick={exportToWord}
-                    className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors duration-300 flex items-center gap-2"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                    Export Word (RTF)
-                  </button>
-                  <button
-                    onClick={exportAsImage}
-                    className="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg transition-colors duration-300 flex items-center gap-2"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
-                    Export Image
-                  </button>
-                  <button
-                    onClick={printBill}
-                    className="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition-colors duration-300 flex items-center gap-2"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                      />
-                    </svg>
-                    Print
-                  </button>
-                  <button
-                    onClick={() => {
-                      setCurrentTemplate(previewTemplate);
-                      setShowBillPreview(false);
-                    }}
-                    className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors duration-300 flex items-center gap-2"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                      />
-                    </svg>
-                    Edit Template
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-6 overflow-auto max-h-[calc(90vh-200px)]">
-                <div className="flex justify-center">
-                  <div className="border border-gray-300 rounded-lg overflow-hidden shadow-lg">
-                    <canvas
-                      ref={billCanvasRef}
-                      width={previewTemplate.width}
-                      height={previewTemplate.height}
-                      className="max-w-full h-auto"
-                      style={{
-                        maxWidth: "100%",
-                        height: "auto",
-                        display: "block",
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <BillPreviewModal
+          open={showBillPreview}
+          template={previewTemplate || null}
+          onClose={() => setShowBillPreview(false)}
+          onExportPDF={exportToPDF}
+          onExportWord={exportToWord}
+          onExportImage={exportAsImage}
+          onPrint={printBill}
+          onEditTemplate={() => {
+            if (previewTemplate) {
+              setCurrentTemplate(previewTemplate);
+              setShowBillPreview(false);
+            }
+          }}
+          canvasRef={billCanvasRef as React.RefObject<HTMLCanvasElement>}
+        />
 
         {/* Template Settings Modal */}
-        {showTemplateSettings && currentTemplate && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                Template Settings
-              </h3>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Template Name
-                  </label>
-                  <input
-                    type="text"
-                    value={currentTemplate.name}
-                    onChange={(e) => {
-                      saveStateForUndo();
-                      const updatedTemplate = {
-                        ...currentTemplate,
-                        name: e.target.value,
-                      };
-                      setCurrentTemplate(updatedTemplate);
-                      setTemplates((prev) =>
-                        prev.map((t) =>
-                          t.id === currentTemplate.id ? updatedTemplate : t
-                        )
-                      );
-                    }}
-                    className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    placeholder="Enter template name"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    value={currentTemplate.description}
-                    onChange={(e) => {
-                      saveStateForUndo();
-                      const updatedTemplate = {
-                        ...currentTemplate,
-                        description: e.target.value,
-                      };
-                      setCurrentTemplate(updatedTemplate);
-                      setTemplates((prev) =>
-                        prev.map((t) =>
-                          t.id === currentTemplate.id ? updatedTemplate : t
-                        )
-                      );
-                    }}
-                    className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-vertical"
-                    placeholder="Enter template description"
-                    rows={3}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Width (px)
-                    </label>
-                    <input
-                      type="number"
-                      value={currentTemplate.width}
-                      onChange={(e) => {
-                        saveStateForUndo();
-                        const newWidth = Math.max(
-                          400,
-                          parseInt(e.target.value) || 800
-                        );
-                        const updatedTemplate = {
-                          ...currentTemplate,
-                          width: newWidth,
-                        };
-                        setCurrentTemplate(updatedTemplate);
-                        setTemplates((prev) =>
-                          prev.map((t) =>
-                            t.id === currentTemplate.id ? updatedTemplate : t
-                          )
-                        );
-                      }}
-                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                      min="400"
-                      max="2000"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Height (px)
-                    </label>
-                    <input
-                      type="number"
-                      value={currentTemplate.height}
-                      onChange={(e) => {
-                        saveStateForUndo();
-                        const newHeight = Math.max(
-                          400,
-                          parseInt(e.target.value) || 1120
-                        );
-                        const updatedTemplate = {
-                          ...currentTemplate,
-                          height: newHeight,
-                        };
-                        setCurrentTemplate(updatedTemplate);
-                        setTemplates((prev) =>
-                          prev.map((t) =>
-                            t.id === currentTemplate.id ? updatedTemplate : t
-                          )
-                        );
-                      }}
-                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                      min="400"
-                      max="2000"
-                    />
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Template Info
-                  </h4>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Fields: {currentTemplate.fields.length} • Created:{" "}
-                    {currentTemplate.createdAt.toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  onClick={() => setShowTemplateSettings(false)}
-                  className="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition-colors duration-300"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={() => {
-                    saveStateForUndo();
-                    const templateCopy: Template = {
-                      ...currentTemplate,
-                      id: `tpl-${Date.now()}`,
-                      name: `${currentTemplate.name} (Copy)`,
-                      createdAt: new Date(),
-                    };
-                    insertTemplateWithLimit(templateCopy, {
-                      setAsCurrent: true,
-                      closeChooser: false,
-                    });
-                    setShowTemplateSettings(false);
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors duration-300"
-                >
-                  Duplicate Template
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <TemplateSettingsModal
+          open={!!showTemplateSettings && !!currentTemplate}
+          template={currentTemplate}
+          onClose={() => setShowTemplateSettings(false)}
+          onUpdate={(patch) => {
+            if (!currentTemplate) return;
+            saveStateForUndo();
+            const updatedTemplate = { ...currentTemplate, ...patch } as Template;
+            setCurrentTemplate(updatedTemplate);
+            setTemplates((prev) =>
+              prev.map((t) => (t.id === currentTemplate.id ? updatedTemplate : t))
+            );
+          }}
+          onDuplicate={() => {
+            if (!currentTemplate) return;
+            saveStateForUndo();
+            const templateCopy: Template = {
+              ...currentTemplate,
+              id: `tpl-${Date.now()}`,
+              name: `${currentTemplate.name} (Copy)`,
+              createdAt: new Date(),
+            };
+            insertTemplateWithLimit(templateCopy, {
+              setAsCurrent: true,
+              closeChooser: false,
+            });
+            setShowTemplateSettings(false);
+          }}
+        />
 
         {/* Instructions */}
         {!currentTemplate && (
