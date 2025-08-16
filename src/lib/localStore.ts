@@ -18,7 +18,25 @@ function readArray<T>(key: string): T[] {
 
 function writeArray<T>(key: string, value: T[]) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, JSON.stringify(value));
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+    return;
+  } catch (err) {
+    // Attempt to trim and retry on quota issues
+    try {
+      const isBills = key === BILLS_KEY;
+      const isLandlords = key === LANDLORDS_KEY;
+      const maxItems = isBills ? 25 : isLandlords ? 100 : 50;
+      const trimmed = Array.isArray(value) ? value.slice(0, maxItems) : value;
+      window.localStorage.setItem(key, JSON.stringify(trimmed));
+      return;
+    } catch {
+      // Final fallback: try to write an empty list to keep app functional
+      try {
+        window.localStorage.setItem(key, JSON.stringify([]));
+      } catch {}
+    }
+  }
 }
 
 // Generic exported helpers (safe wrappers) for reuse

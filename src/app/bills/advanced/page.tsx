@@ -79,6 +79,26 @@ interface Template {
 const TEMPLATES_KEY = "hrb_templates_v1";
 const LAST_TEMPLATE_KEY = "hrb_last_template_id_v1";
 const CUSTOM_INBOX_KEY = "hrb_custom_inbox_template_v1";
+const MAX_TEMPLATES = 4;
+// Protect the built-in default template (initialized with id "tpl-1") from auto-deletion
+const DEFAULT_TEMPLATE_ID = "tpl-1";
+
+// Keep at most MAX_TEMPLATES items; if over, remove the oldest non-default templates.
+// Returns the trimmed list and the removed templates.
+function enforceTemplateLimit(list: Template[]): { list: Template[]; removed: Template[] } {
+  if (list.length <= MAX_TEMPLATES) return { list, removed: [] };
+
+  // Sort by createdAt ascending (oldest first)
+  const sorted = [...list].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  const removed: Template[] = [];
+  while (sorted.length > MAX_TEMPLATES) {
+    // Find the oldest that is not the default; if all are default-only scenario, break
+    const idx = sorted.findIndex((t) => t.id !== DEFAULT_TEMPLATE_ID);
+    if (idx === -1) break;
+    removed.push(sorted.splice(idx, 1)[0]);
+  }
+  return { list: sorted, removed };
+}
 
 type ResizeHandle = null | "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
 
@@ -655,6 +675,21 @@ export default function AdvancedBillGeneratorPage() {
   const [redoStack, setRedoStack] = useState<Template[]>([]);
   const maxUndoSteps = 50;
 
+  // On mount, load any persisted templates from localStorage
+  useEffect(() => {
+    try {
+      const stored = readArrayKey<any>(TEMPLATES_KEY);
+      if (Array.isArray(stored) && stored.length > 0) {
+        const parsed: Template[] = stored.map((t: any) => ({
+          ...t,
+          createdAt: new Date(t.createdAt),
+        }));
+        setTemplates(parsed);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Restore last-opened template or select first by default
   useEffect(() => {
     if (!currentTemplate && templates.length > 0) {
@@ -708,6 +743,9 @@ export default function AdvancedBillGeneratorPage() {
     try {
       if (currentTemplate && typeof window !== "undefined") {
         window.localStorage.setItem(LAST_TEMPLATE_KEY, currentTemplate.id);
+        // Debug: record last selected template id writes
+        // eslint-disable-next-line no-console
+        console.log("[Advanced] Persisted last template id:", currentTemplate.id);
       }
     } catch {}
   }, [currentTemplate]);
@@ -715,12 +753,35 @@ export default function AdvancedBillGeneratorPage() {
   // Persist templates to localStorage whenever they change
   useEffect(() => {
     try {
-      const serializable = templates.map((t) => ({
-        ...t,
-        createdAt:
-          t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt,
-      }));
-      writeArrayKey(TEMPLATES_KEY, serializable as any);
+      // Upsert-merge current in-memory templates into existing storage, do not overwrite
+      const existing = readArrayKey<any>(TEMPLATES_KEY);
+      const existingList: any[] = Array.isArray(existing) ? existing : [];
+
+      // Build a map of existing by id
+      const byId = new Map<string, any>(
+        existingList.map((t: any) => [t.id, t])
+      );
+
+      // Upsert each current template
+      for (const t of templates) {
+        const serial = {
+          ...t,
+          createdAt:
+            t.createdAt instanceof Date
+              ? t.createdAt.toISOString()
+              : (t as any).createdAt,
+        } as any;
+        byId.set(t.id, serial);
+      }
+
+      const merged = Array.from(byId.values());
+      writeArrayKey(TEMPLATES_KEY, merged);
+      // Debug: record template array writes
+      // eslint-disable-next-line no-console
+      console.log(
+        "[Advanced] Wrote templates to localStorage (upsert):",
+        merged.length
+      );
     } catch {}
   }, [templates]);
 
@@ -1062,28 +1123,37 @@ export default function AdvancedBillGeneratorPage() {
 
         // Handle multi-line text for textarea fields
         if (field.type === "textarea" && content.includes("\n")) {
+          const pad = 4; // small vertical padding to avoid edge clipping
           const lines = content.split("\n");
-          const lineHeight = (field.fontSize || 16) * 1.2;
+          const fontSize = field.fontSize || 16;
+          // Use metrics for ascent/descent if available
+          const mProbe = ctx.measureText("Mg");
+          const ascent = (mProbe.actualBoundingBoxAscent ?? fontSize * 0.8);
+          const descent = (mProbe.actualBoundingBoxDescent ?? fontSize * 0.2);
+          const boxHeight = ascent + descent;
+          const lineHeight = Math.max(boxHeight * 1.1, fontSize * 1.15);
           const totalTextHeight = lines.length * lineHeight;
-          let startY =
-            field.y + (field.height - totalTextHeight) / 2 + lineHeight / 2;
+          let startY = field.y + Math.max(pad, (field.height - totalTextHeight) / 2);
 
-          ctx.textBaseline = "middle";
+          ctx.textBaseline = "alphabetic";
           lines.forEach((line, index) => {
-            const y = startY + index * lineHeight;
-            if (y >= field.y && y <= field.y + field.height) {
-              ctx.fillText(line, tx, y, field.width - 16);
+            const baselineY = startY + index * lineHeight + ascent;
+            // draw only if full glyph box fits
+            if (baselineY + (descent) <= field.y + field.height - pad) {
+              ctx.fillText(line, tx, baselineY, field.width - 16);
             }
           });
         } else {
-          // Single line text
-          ctx.textBaseline = "middle";
-          ctx.fillText(
-            content,
-            tx,
-            field.y + field.height / 2,
-            field.width - 16
-          );
+          // Single line text using precise metrics centering
+          const pad = 4;
+          const fontSize = field.fontSize || 16;
+          const m = ctx.measureText(content || "Mg");
+          const ascent = (m.actualBoundingBoxAscent ?? fontSize * 0.8);
+          const descent = (m.actualBoundingBoxDescent ?? fontSize * 0.2);
+          const boxHeight = ascent + descent;
+          const baselineY = field.y + Math.max(pad, (field.height - boxHeight) / 2) + ascent;
+          ctx.textBaseline = "alphabetic";
+          ctx.fillText(content, tx, baselineY, field.width - 16);
         }
       }
 
@@ -1623,6 +1693,55 @@ export default function AdvancedBillGeneratorPage() {
   };
 
   // Create from our professional sample (duplicate first professional or fallback to defaults)
+  // Insert helper: enforces MAX_TEMPLATES with a single confirmation, never deletes default,
+  // updates state and persists to localStorage. Returns true if added.
+  const insertTemplateWithLimit = (newTemplate: Template, opts?: { setAsCurrent?: boolean; closeChooser?: boolean }) => {
+    const { setAsCurrent = true, closeChooser = true } = opts || {};
+    // Work off current in-memory list to avoid multiple confirms
+    let baseList = templates;
+    let removedId: string | null = null;
+    if (baseList.length >= MAX_TEMPLATES) {
+      const sorted = [...baseList].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+      const oldest = sorted.find((t) => t.id !== DEFAULT_TEMPLATE_ID);
+      if (!oldest) return false;
+      const ok = window.confirm(
+        `Template limit is ${MAX_TEMPLATES}. Delete oldest template "${oldest.name}" to create a new one?`
+      );
+      if (!ok) return false;
+      baseList = baseList.filter((p) => p.id !== oldest.id);
+      removedId = oldest.id;
+    }
+
+    const next = [newTemplate, ...baseList];
+    // Update state
+    setTemplates(next);
+    if (setAsCurrent) setCurrentTemplate(newTemplate);
+    if (closeChooser) setShowNewTemplateChooser(false);
+
+    // Persist to storage (serialize createdAt)
+    try {
+      const serial = next.map((t) => ({
+        ...t,
+        createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : (t as any).createdAt,
+      }));
+      writeArrayKey(TEMPLATES_KEY, serial);
+      if (typeof window !== "undefined" && setAsCurrent) {
+        window.localStorage.setItem(LAST_TEMPLATE_KEY, newTemplate.id);
+      }
+      // If we removed the last-used template, clear it
+      if (typeof window !== "undefined" && removedId) {
+        const lastId = window.localStorage.getItem(LAST_TEMPLATE_KEY);
+        if (lastId === removedId) window.localStorage.removeItem(LAST_TEMPLATE_KEY);
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to persist templates:", e);
+    }
+    return true;
+  };
+
   const createFromProfessional = () => {
     // Try to find a professional template to duplicate
     const base = templates.find((t) => /professional/i.test(t.name)) || null;
@@ -1632,6 +1751,9 @@ export default function AdvancedBillGeneratorPage() {
           ...base,
           id: `tpl-${Date.now()}`,
           name: `${base.name} (${idx})`,
+          description: base.description,
+          width: base.width,
+          height: base.height,
           createdAt: new Date(),
           fields: base.fields.map((f) => ({
             ...f,
@@ -1649,31 +1771,11 @@ export default function AdvancedBillGeneratorPage() {
           createdAt: new Date(),
           fields: [],
         };
-    setTemplates((prev) => [newTemplate, ...prev]);
-    setCurrentTemplate(newTemplate);
-    setShowNewTemplateChooser(false);
-    setIsEditing(true);
+
+    // Before adding, enforce limit with confirmation
+    insertTemplateWithLimit(newTemplate, { setAsCurrent: true, closeChooser: true });
   };
 
-  // Create empty canvas template
-  const createEmptyTemplate = () => {
-    const idx = templates.length + 1;
-    const t: Template = {
-      id: `tpl-${Date.now()}`,
-      name: `Empty Template ${idx}`,
-      description: "Blank canvas to design your own",
-      width: 800,
-      height: 1120,
-      createdAt: new Date(),
-      fields: [],
-    };
-    setTemplates((prev) => [t, ...prev]);
-    setCurrentTemplate(t);
-    setShowNewTemplateChooser(false);
-    setIsEditing(true);
-  };
-
-  // Legacy: keep as convenience path to quickly add a default-rich template (treated as professional)
   const createNewTemplate = () => {
     const idx = templates.length + 1;
     const defaultFields: TemplateField[] = [
@@ -1807,8 +1909,13 @@ export default function AdvancedBillGeneratorPage() {
       createdAt: new Date(),
       fields: defaultFields,
     };
-    setTemplates((prev) => [t, ...prev]);
-    setCurrentTemplate(t);
+    // Before adding, enforce limit with confirmation
+    insertTemplateWithLimit(t, { setAsCurrent: true, closeChooser: true });
+  };
+
+  // Wrapper for modal button: start an empty template and close chooser
+  const createEmptyTemplate = () => {
+    createNewTemplate();
   };
   // Load stored templates on mount (client-only) to avoid SSR hydration mismatches
   useEffect(() => {
@@ -1875,36 +1982,67 @@ export default function AdvancedBillGeneratorPage() {
     setShowFieldEditor(false);
   };
 
-  const saveTemplate = () => {
-    // local only, already synced to state
+ 
+
+const saveTemplate = () => {
+  // Upsert only the current template into localStorage so others are preserved
+  try {
+    const existing = readArrayKey<any>(TEMPLATES_KEY);
+    const list: any[] = Array.isArray(existing) ? existing : [];
+    const byId = new Map<string, any>(list.map((t: any) => [t.id, t]));
+    if (currentTemplate) {
+      const serial = {
+        ...currentTemplate,
+        createdAt:
+          currentTemplate.createdAt instanceof Date
+            ? currentTemplate.createdAt.toISOString()
+            : (currentTemplate as any).createdAt,
+      } as any;
+      byId.set(currentTemplate.id, serial);
+    }
+    const merged = Array.from(byId.values());
+    writeArrayKey(TEMPLATES_KEY, merged);
+    if (typeof window !== "undefined" && currentTemplate) {
+      window.localStorage.setItem(LAST_TEMPLATE_KEY, currentTemplate.id);
+    }
     alert("Template saved locally.");
-  };
+  } catch (e) {
+    console.error(e);
+    alert("Failed to save template");
+  }
+};
 
-  const exportCurrentCanvasToPdf = () => {
-    const canvas = canvasRef.current;
-    if (!canvas || !currentTemplate) return;
+const exportCurrentCanvasToPdf = () => {
+  const canvas = canvasRef.current;
+  if (!canvas || !currentTemplate) return;
 
-    const imgData = canvas.toDataURL("image/png");
-    // Use points; map canvas px to pt 1:1 for simplicity
+    // Render onto an offscreen canvas with generous padding to avoid edge clipping
+    const pad = 24; // pixels padding around image
+    const off = document.createElement("canvas");
+    // Use the backing resolution of the rendered canvas for maximum sharpness
+    off.width = canvas.width + pad * 2;
+    off.height = canvas.height + pad * 2;
+    const octx = off.getContext("2d");
+    if (!octx) return;
+    // White background
+    octx.fillStyle = "#ffffff";
+    octx.fillRect(0, 0, off.width, off.height);
+    // Copy without smoothing to preserve sharpness
+    octx.imageSmoothingEnabled = false;
+    try { (octx as any).imageSmoothingQuality = "high"; } catch {}
+    // Draw original canvas with padding
+    octx.drawImage(canvas, pad, pad);
+
+    const imgData = off.toDataURL("image/png"); // lossless PNG
+    // Use pixel units and disable compression to avoid softening
     const pdf = new jsPDF({
-      orientation:
-        currentTemplate.width > currentTemplate.height
-          ? "landscape"
-          : "portrait",
-      unit: "pt",
-      format: [currentTemplate.width, currentTemplate.height],
-      compress: true,
+      orientation: off.width > off.height ? "landscape" : "portrait",
+      unit: "px",
+      format: [off.width, off.height],
+      compress: false,
     });
-    pdf.addImage(
-      imgData,
-      "PNG",
-      0,
-      0,
-      currentTemplate.width,
-      currentTemplate.height,
-      undefined,
-      "FAST"
-    );
+    // Slight inset and -1 size reduce to avoid PDF viewer/printer edge clipping
+    pdf.addImage(imgData, "PNG", 0.5, 0.5, Math.max(1, off.width - 1), Math.max(1, off.height - 1));
     pdf.save(`${currentTemplate.name || "template"}.pdf`);
   };
 
@@ -2055,44 +2193,33 @@ export default function AdvancedBillGeneratorPage() {
       // Re-render to ensure latest state
       renderBillToCanvas(billCanvasRef.current, previewTemplate);
 
-      // Wait for images to load
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Wait a moment for any async image loads
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-      // Get canvas and convert to image
-      const canvas = billCanvasRef.current;
-      const imgData = canvas.toDataURL("image/png", 1.0);
+      // Use an offscreen canvas with padding to avoid clipping
+      const src = billCanvasRef.current;
+      const pad = 24;
+      const off = document.createElement("canvas");
+      off.width = src.width + pad * 2;
+      off.height = src.height + pad * 2;
+      const octx = off.getContext("2d");
+      if (!octx) return;
+      octx.fillStyle = "#ffffff";
+      octx.fillRect(0, 0, off.width, off.height);
+      octx.imageSmoothingEnabled = false;
+      try { (octx as any).imageSmoothingQuality = "high"; } catch {}
+      octx.drawImage(src, pad, pad);
 
-      // Calculate PDF dimensions (A4 size)
-      const pdfWidth = 210; // A4 width in mm
-      const pdfHeight = 297; // A4 height in mm
-      const canvasAspectRatio = canvas.width / canvas.height;
-
-      let imgWidth = pdfWidth - 20; // 10mm margin on each side
-      let imgHeight = imgWidth / canvasAspectRatio;
-
-      // If image is too tall, scale it down
-      if (imgHeight > pdfHeight - 20) {
-        imgHeight = pdfHeight - 20;
-        imgWidth = imgHeight * canvasAspectRatio;
-      }
-
-      // Create PDF
+      const imgData = off.toDataURL("image/png");
       const pdf = new jsPDF({
-        orientation: imgWidth > imgHeight ? "landscape" : "portrait",
-        unit: "mm",
-        format: "a4",
+        orientation: off.width > off.height ? "landscape" : "portrait",
+        unit: "px",
+        format: [off.width, off.height],
+        compress: false,
       });
+      pdf.addImage(imgData, "PNG", 0.5, 0.5, Math.max(1, off.width - 1), Math.max(1, off.height - 1));
 
-      // Center the image
-      const x = (pdfWidth - imgWidth) / 2;
-      const y = (pdfHeight - imgHeight) / 2;
-
-      pdf.addImage(imgData, "PNG", x, y, imgWidth, imgHeight);
-
-      // Save the PDF
-      const fileName = `${previewTemplate.name
-        .replace(/[^a-z0-9]/gi, "_")
-        .toLowerCase()}_bill.pdf`;
+      const fileName = `${previewTemplate.name.replace(/[^a-z0-9]/gi, "_").toLowerCase()}_bill.pdf`;
       pdf.save(fileName);
     } catch (error) {
       console.error("PDF export failed:", error);
@@ -2220,15 +2347,27 @@ export default function AdvancedBillGeneratorPage() {
   }, [showBillPreview, previewTemplate, renderBillToCanvas]);
 
   const deleteTemplate = (templateId: string) => {
+    // Update UI state
     setTemplates((prev) => prev.filter((t) => t.id !== templateId));
     setCurrentTemplate((ct) => (ct && ct.id === templateId ? null : ct));
+
+    // Persist deletion in localStorage
     try {
+      const existing = readArrayKey<any>(TEMPLATES_KEY);
+      const list: any[] = Array.isArray(existing) ? existing : [];
+      const filtered = list.filter((t: any) => t && t.id !== templateId);
+      writeArrayKey(TEMPLATES_KEY, filtered);
+
       if (typeof window !== "undefined") {
         const lastId = window.localStorage.getItem(LAST_TEMPLATE_KEY);
-        if (lastId === templateId)
+        if (lastId === templateId) {
           window.localStorage.removeItem(LAST_TEMPLATE_KEY);
+        }
       }
-    } catch {}
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to persist template deletion:", e);
+    }
   };
 
   return (
@@ -2412,13 +2551,16 @@ export default function AdvancedBillGeneratorPage() {
                     <Button
                       variant="success"
                       onClick={() => {
-                        const templateCopy = {
+                        const templateCopy: Template = {
                           ...template,
                           id: `tpl-${Date.now()}`,
                           name: `${template.name} (Copy)`,
                           createdAt: new Date(),
                         };
-                        setTemplates((prev) => [...prev, templateCopy]);
+                        insertTemplateWithLimit(templateCopy, {
+                          setAsCurrent: false,
+                          closeChooser: false,
+                        });
                       }}
                     >
                       <svg
@@ -3741,14 +3883,16 @@ export default function AdvancedBillGeneratorPage() {
                 <button
                   onClick={() => {
                     saveStateForUndo();
-                    const templateCopy = {
+                    const templateCopy: Template = {
                       ...currentTemplate,
                       id: `tpl-${Date.now()}`,
                       name: `${currentTemplate.name} (Copy)`,
                       createdAt: new Date(),
                     };
-                    setTemplates((prev) => [...prev, templateCopy]);
-                    setCurrentTemplate(templateCopy);
+                    insertTemplateWithLimit(templateCopy, {
+                      setAsCurrent: true,
+                      closeChooser: false,
+                    });
                     setShowTemplateSettings(false);
                   }}
                   className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors duration-300"
