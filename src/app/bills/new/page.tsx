@@ -7,6 +7,15 @@ import { format } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
 import type { Landlord, Bill } from "@/lib/types";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import {
   computeNextNumericBillNumber,
   fileToDataUrl,
@@ -62,6 +71,7 @@ export default function NewBillPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   // Track pending file reads for template image/signature fields to avoid race conditions
   const pendingReadsRef = useRef<Promise<void>[]>([]);
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   const form = useForm({
     resolver: zodResolver(billFormSchema),
@@ -1498,617 +1508,656 @@ export default function NewBillPage() {
   }
 
   return (
-    <div className="grid gap-6 max-w-5xl mx-auto px-3 sm:px-4 pt-6 sm:pt-8 pb-10 sm:pb-12 overflow-x-hidden min-w-0">
-      <h1 className="text-2xl font-semibold">House Rent Bill</h1>
+    <div className="h-screen overflow-hidden">
+      <div className="grid gap-6 max-w-6xl mx-auto px-3 sm:px-6 pt-6 sm:pt-8 pb-28 sm:pb-32 overflow-auto min-w-0 h-full">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+          <h1 className="text-2xl font-semibold tracking-tight">House Rent Bill</h1>
+          <p className="text-sm text-gray-600 mt-1">Create, preview, and export a professional house rent bill.</p>
+          </div>
+        </div>
 
       {/* Template (optional) selector */}
-      <div className="rounded-md ring-1 ring-inset p-3 sm:p-4 grid gap-3 w-full max-w-3xl mx-auto">
-        <div className="flex items-center gap-2">
-          <div className="text-sm font-semibold opacity-80">
-            Template (optional)
+      <Card className="w-full md:col-span-2">
+        <CardHeader className="flex items-center justify-between gap-3 sm:flex-row sm:items-center">
+          <div>
+            <CardTitle className="text-base">Template (optional)</CardTitle>
+            <CardDescription>Use a saved template or continue with the default layout.</CardDescription>
           </div>
-          <button
-            type="button"
-            className="text-xs px-2 py-1 rounded ring-1 ring-inset"
-            onClick={loadTemplates}
-            title="Reload templates"
-          >
+          <Button variant="outline" size="sm" onClick={loadTemplates} title="Reload templates">
             Reload
-          </button>
-        </div>
-        <label className="grid gap-1">
-          <span className="text-sm">Choose a saved template</span>
-          <select
-            className="ring-1 ring-inset rounded px-3 py-2 w-full bg-white text-black"
-            value={selectedTemplateId}
-            onChange={(e) => setSelectedTemplateId(e.target.value)}
-            onFocus={loadTemplates}
-          >
-            <option value="">— None (use default House Bill) —</option>
-            {templates.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <label className="grid gap-1">
+            <span className="text-sm">Choose a saved template</span>
+            <select
+              className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              value={selectedTemplateId}
+              onChange={(e) => setSelectedTemplateId(e.target.value)}
+              onFocus={loadTemplates}
+            >
+              <option value="">— None (use default House Bill) —</option>
+              {templates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </CardContent>
+      </Card>
 
       {/* If a template is selected, show template UI + PdfUpload; else show the original form unchanged */}
-      {selectedTemplateId ? (
-        <div className="grid gap-4 w-full max-w-3xl mx-auto">
-          {(() => {
-            const tpl = selectedTemplate;
-            return (
-              <div className="rounded-md ring-1 ring-inset p-3 sm:p-4 grid gap-2">
-                <div className="text-sm font-semibold">Selected Template</div>
-                <div className="text-base font-medium">
-                  {tpl?.name ?? "Template"}
-                </div>
-                {tpl?.description && (
-                  <div className="text-sm opacity-80">{tpl.description}</div>
-                )}
-              </div>
-            );
-          })()}
+      <div className="grid items-start gap-8 md:grid-cols-[3fr_4fr]">
+        {selectedTemplateId ? (
+          <div className="flex flex-col gap-6 w-full">
+            {(() => {
+              const tpl = selectedTemplate;
+              return (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Selected Template</CardTitle>
+                    <div className="text-base font-medium">{tpl?.name ?? "Template"}</div>
+                    {tpl?.description && (
+                      <CardDescription>{tpl.description}</CardDescription>
+                    )}
+                  </CardHeader>
+                </Card>
+              );
+            })()}
 
-          <div className="overflow-visible">
-            <PdfUpload
-              onFieldsExtracted={handleFieldsExtracted}
-              onNextMonthBill={handleNextMonthBill}
-              disabled={saving}
-            />
-          </div>
+            <div className="overflow-visible">
+              <PdfUpload
+                onFieldsExtracted={handleFieldsExtracted}
+                onNextMonthBill={handleNextMonthBill}
+                disabled={saving}
+              />
+            </div>
 
-          {/* Dynamic fields for selected template */}
-          {selectedTemplate && (
-            <div className="rounded-md ring-1 ring-inset p-3 sm:p-4 grid gap-3">
-              <div className="text-sm font-semibold opacity-80">
-                Template Fields
-              </div>
-              <div className="grid grid-cols-1 gap-3">
-                {selectedTemplate.fields.map((f) => {
-                  const val = templateForm[f.id] ?? "";
-                  const setVal = (v: string) =>
-                    setTemplateForm((prev) => ({ ...prev, [f.id]: v }));
-                  if (f.type === "textarea") {
+            {/* Dynamic fields for selected template */}
+            {selectedTemplate && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Template Fields</CardTitle>
+                  <CardDescription>Fill the values used to render the template.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 gap-4">
+                  {selectedTemplate.fields.map((f) => {
+                    const val = templateForm[f.id] ?? "";
+                    const setVal = (v: string) =>
+                      setTemplateForm((prev) => ({ ...prev, [f.id]: v }));
+                    if (f.type === "textarea") {
+                      return (
+                        <label key={f.id} className="grid gap-1">
+                          <span className="text-sm">{f.label}</span>
+                          <textarea
+                            className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[84px]"
+                            placeholder={f.placeholder}
+                            value={val}
+                            onChange={(e) => setVal(e.target.value)}
+                          />
+                        </label>
+                      );
+                    }
+                    if (f.type === "select" && Array.isArray(f.options)) {
+                      return (
+                        <label key={f.id} className="grid gap-1">
+                          <span className="text-sm">{f.label}</span>
+                          <select
+                            className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value={val}
+                            onChange={(e) => setVal(e.target.value)}
+                          >
+                            <option value="">Select...</option>
+                            {f.options.map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      );
+                    }
+                    if (f.type === "image" || f.type === "signature") {
+                      return (
+                        <label key={f.id} className="grid gap-1">
+                          <span className="text-sm">
+                            {f.label} ({f.type})
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const reader = new FileReader();
+                              // Wrap read in a tracked promise so submit can await completion
+                              const p = new Promise<void>((resolve) => {
+                                reader.onload = () => {
+                                  setVal(String(reader.result ?? ""));
+                                  resolve();
+                                };
+                                reader.onerror = () => resolve();
+                              });
+                              pendingReadsRef.current = [
+                                ...pendingReadsRef.current,
+                                p,
+                              ];
+                              reader.readAsDataURL(file);
+                              // Clean up this promise when done
+                              p.finally(() => {
+                                pendingReadsRef.current =
+                                  pendingReadsRef.current.filter(
+                                    (it) => it !== p
+                                  );
+                              });
+                            }}
+                          />
+                          {val && (
+                            <span className="text-xs opacity-70">
+                              Image selected
+                            </span>
+                          )}
+                        </label>
+                      );
+                    }
+                    // text, number, date, amount -> map to input
+                    const inputType =
+                      f.type === "date"
+                        ? "date"
+                        : f.type === "number" || f.type === "amount"
+                        ? "number"
+                        : "text";
                     return (
                       <label key={f.id} className="grid gap-1">
                         <span className="text-sm">{f.label}</span>
-                        <textarea
-                          className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full min-h-[84px]"
+                        <input
+                          className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          type={inputType}
                           placeholder={f.placeholder}
                           value={val}
                           onChange={(e) => setVal(e.target.value)}
                         />
                       </label>
                     );
-                  }
-                  if (f.type === "select" && Array.isArray(f.options)) {
-                    return (
-                      <label key={f.id} className="grid gap-1">
-                        <span className="text-sm">{f.label}</span>
-                        <select
-                          className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
-                          value={val}
-                          onChange={(e) => setVal(e.target.value)}
-                        >
-                          <option value="">Select...</option>
-                          {f.options.map((opt) => (
-                            <option key={opt} value={opt}>
-                              {opt}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    );
-                  }
-                  if (f.type === "image" || f.type === "signature") {
-                    return (
-                      <label key={f.id} className="grid gap-1">
-                        <span className="text-sm">
-                          {f.label} ({f.type})
-                        </span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            const reader = new FileReader();
-                            // Wrap read in a tracked promise so submit can await completion
-                            const p = new Promise<void>((resolve) => {
-                              reader.onload = () => {
-                                setVal(String(reader.result ?? ""));
-                                resolve();
-                              };
-                              reader.onerror = () => resolve();
-                            });
-                            pendingReadsRef.current = [
-                              ...pendingReadsRef.current,
-                              p,
-                            ];
-                            reader.readAsDataURL(file);
-                            // Clean up this promise when done
-                            p.finally(() => {
-                              pendingReadsRef.current =
-                                pendingReadsRef.current.filter(
-                                  (it) => it !== p
-                                );
-                            });
-                          }}
-                        />
-                        {val && (
-                          <span className="text-xs opacity-70">
-                            Image selected
-                          </span>
-                        )}
-                      </label>
-                    );
-                  }
-                  // text, number, date, amount -> map to input
-                  const inputType =
-                    f.type === "date"
-                      ? "date"
-                      : f.type === "number" || f.type === "amount"
-                      ? "number"
-                      : "text";
-                  return (
-                    <label key={f.id} className="grid gap-1">
-                      <span className="text-sm">{f.label}</span>
-                      <input
-                        className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
-                        type={inputType}
-                        placeholder={f.placeholder}
-                        value={val}
-                        onChange={(e) => setVal(e.target.value)}
-                      />
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          <div>
-            <button
-              type="button"
-              className="px-3 py-2 rounded ring-1 ring-inset"
-              onClick={() => setSelectedTemplateId("")}
-            >
-              Back to default form
-            </button>
-          </div>
-
-          {/* Validation summary for template mode */}
-          {templateErrors.length > 0 && (
-            <div className="rounded-md ring-1 ring-red-500/40 bg-red-500/5 p-3 sm:p-4">
-              <div className="text-sm font-semibold text-red-600 mb-1">
-                Please fix the following:
-              </div>
-              <ul className="list-disc pl-5 text-sm text-red-700 space-y-0.5">
-                {templateErrors.map((e, i) => (
-                  <li key={i}>{e}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Actions (use the same submit/preview pipeline) */}
-          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
-            <button
-              type="button"
-              disabled={saving}
-              className="px-4 py-2 rounded bg-foreground text-background disabled:opacity-50 w-full sm:w-auto"
-              onClick={submitFromTemplate}
-            >
-              {saving ? "Saving..." : "Save & Preview"}
-            </button>
-            {previewHtml && (
-              <>
-                <button
-                  type="button"
-                  onClick={exportPdf}
-                  className="px-4 py-2 rounded ring-1 ring-inset w-full sm:w-auto"
-                >
-                  Download PDF
-                </button>
-                <button
-                  type="button"
-                  onClick={exportTemplateVectorPdf}
-                  className="px-4 py-2 rounded ring-1 ring-inset w-full sm:w-auto"
-                  title="Vector (pdf-lib) exact field mapping"
-                >
-                  Download PDF (vector)
-                </button>
-                <button
-                  type="button"
-                  onClick={printPreview}
-                  className="px-4 py-2 rounded ring-1 ring-inset w-full sm:w-auto"
-                >
-                  Print
-                </button>
-              </>
+                  })}
+                </CardContent>
+              </Card>
             )}
-          </div>
-        </div>
-      ) : (
-        <form
-          className="grid gap-6 w-full max-w-3xl mx-auto min-w-0 break-words"
-          onSubmit={form.handleSubmit(onSubmit)}
-        >
-          <div className="overflow-visible">
-            <PdfUpload
-              onFieldsExtracted={handleFieldsExtracted}
-              onNextMonthBill={handleNextMonthBill}
-              disabled={saving}
-            />
-          </div>
 
-          <div className="rounded-md ring-1 ring-inset p-3 sm:p-4 grid gap-3 sm:gap-4">
-            <div className="text-sm font-semibold opacity-80">Bill details</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 min-w-0">
-              <label className="grid gap-1">
-                <span className="text-sm">Period (Month)</span>
-                <Controller
-                  name="period"
-                  control={form.control}
-                  render={({ field }) => (
-                    <DatePicker
-                      selected={
-                        field.value ? new Date(field.value + "-01") : null
-                      }
-                      onChange={(date) => {
-                        if (date) {
-                          const year = date.getFullYear();
-                          const month = String(date.getMonth() + 1).padStart(
-                            2,
-                            "0"
-                          );
-                          field.onChange(`${year}-${month}`);
-                        }
-                      }}
-                      dateFormat="MMMM yyyy"
-                      showMonthYearPicker
-                      showFullMonthYearPicker
-                      placeholderText="Select month and year"
-                      className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
-                    />
-                  )}
-                />
-                {form.formState.errors.period && (
-                  <span className="text-xs text-red-600">
-                    {form.formState.errors.period.message as string}
-                  </span>
-                )}
-              </label>
-              <label className="grid gap-1">
-                <span className="text-sm">Bill Date</span>
-                <Controller
-                  name="date"
-                  control={form.control}
-                  render={({ field }) => (
-                    <DatePicker
-                      selected={field.value ? new Date(field.value) : null}
-                      onChange={(date) => {
-                        if (date) {
-                          field.onChange(format(date, "yyyy-MM-dd"));
-                        }
-                      }}
-                      dateFormat="dd/MM/yyyy"
-                      placeholderText="Select date"
-                      className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
-                    />
-                  )}
-                />
-                {form.formState.errors.date && (
-                  <span className="text-xs text-red-600">Date is required</span>
-                )}
-              </label>
+            <div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedTemplateId("")}
+              >
+                Back to default form
+              </Button>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:gap-4 min-w-0">
-              <label className="grid gap-1">
-                <span className="text-sm">Bill Number</span>
-                <div className="relative">
-                  <input
-                    className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full pr-10"
-                    placeholder="Enter bill number"
-                    {...form.register("bill_number")}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const randomBillNumber = `BILL-${uuidv4()
-                        .slice(0, 8)
-                        .toUpperCase()}`;
-                      form.setValue("bill_number", randomBillNumber);
-                    }}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
-                    title="Generate random bill number"
-                  >
-                    <svg
-                      className="w-4 h-4 text-gray-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                      />
-                    </svg>
-                  </button>
+            {/* Validation summary for template mode */}
+            {templateErrors.length > 0 && (
+              <div className="rounded-md ring-1 ring-red-500/40 bg-red-500/5 p-3 sm:p-4">
+                <div className="text-sm font-semibold text-red-600 mb-1">
+                  Please fix the following:
                 </div>
-              </label>
+                <ul className="list-disc pl-5 text-sm text-red-700 space-y-0.5">
+                  {templateErrors.map((e, i) => (
+                    <li key={i}>{e}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Primary action only; export/print live in the Preview toolbar */}
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
+              <Button
+                type="button"
+                disabled={saving}
+                onClick={submitFromTemplate}
+              >
+                {saving ? "Saving..." : "Save & Preview"}
+              </Button>
             </div>
           </div>
-
-          <div className="rounded-md ring-1 ring-inset p-3 sm:p-4 grid gap-3 sm:gap-4">
-            <div className="text-sm font-semibold opacity-80">Landlord</div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className={`px-3 py-1 rounded text-sm ring-1 ring-inset ${
-                  landlordMode === "existing"
-                    ? "bg-foreground text-background"
-                    : ""
-                }`}
-                onClick={() => form.setValue("landlord_mode", "existing")}
-              >
-                Existing
-              </button>
-              <button
-                type="button"
-                className={`px-3 py-1 rounded text-sm ring-1 ring-inset ${
-                  landlordMode === "manual"
-                    ? "bg-foreground text-background"
-                    : ""
-                }`}
-                onClick={() => form.setValue("landlord_mode", "manual")}
-              >
-                Manual
-              </button>
+        ) : (
+          <form
+            ref={formRef}
+            className="flex flex-col gap-6 w-full min-w-0 break-words"
+            onSubmit={form.handleSubmit(onSubmit)}
+          >
+            <div className="overflow-visible">
+              <PdfUpload
+                onFieldsExtracted={handleFieldsExtracted}
+                onNextMonthBill={handleNextMonthBill}
+                disabled={saving}
+              />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 min-w-0">
-              {landlordMode === "existing" ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Bill details</CardTitle>
+                <CardDescription>Set the billing month, date, and number.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 min-w-0">
                 <label className="grid gap-1">
-                  <span className="text-sm">Saved Landlords</span>
-                  <select
-                    className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
-                    value={landlordIdExisting}
-                    onChange={(e) =>
-                      form.setValue("landlord_id", e.target.value)
-                    }
-                  >
-                    {landlords.length === 0 ? (
-                      <option value="" disabled>
-                        No landlords saved
-                      </option>
-                    ) : null}
-                    {landlords.map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {l.name}
-                      </option>
-                    ))}
-                  </select>
-                  {form.formState.errors.landlord_id && (
-                    <span className="text-xs text-red-600">
-                      {form.formState.errors.landlord_id.message as string}
-                    </span>
-                  )}
-                </label>
-              ) : (
-                <label className="grid gap-1">
-                  <span className="text-sm">Landlord Name</span>
-                  <input
-                    className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
-                    placeholder="Type landlord name"
-                    {...form.register("landlord_name")}
-                  />
-                  {form.formState.errors.landlord_name && (
-                    <span className="text-xs text-red-600">
-                      {form.formState.errors.landlord_name.message as string}
-                    </span>
-                  )}
-                </label>
-              )}
-
-              <label className="grid gap-1">
-                <span className="text-sm">Agreement Date</span>
-                <Controller
-                  name="agreement_date"
-                  control={form.control}
-                  render={({ field }) => (
-                    <DatePicker
-                      selected={field.value ? new Date(field.value) : null}
-                      onChange={(date) => {
-                        if (date) {
-                          field.onChange(format(date, "yyyy-MM-dd"));
+                  <span className="text-sm">Period (Month)</span>
+                  <Controller
+                    name="period"
+                    control={form.control}
+                    render={({ field }) => (
+                      <DatePicker
+                        selected={
+                          field.value ? new Date(field.value + "-01") : null
                         }
-                      }}
-                      dateFormat="dd/MM/yyyy"
-                      placeholderText="Select agreement date"
-                      className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
-                    />
+                        onChange={(date) => {
+                          if (date) {
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(
+                              2,
+                              "0"
+                            );
+                            field.onChange(`${year}-${month}`);
+                          }
+                        }}
+                        dateFormat="MMMM yyyy"
+                        showMonthYearPicker
+                        showFullMonthYearPicker
+                        placeholderText="Select month and year"
+                        className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    )}
+                  />
+                  {form.formState.errors.period && (
+                    <span className="text-xs text-red-600">
+                      {form.formState.errors.period.message as string}
+                    </span>
                   )}
-                />
-                {form.formState.errors.agreement_date && (
-                  <span className="text-xs text-red-600">
-                    Agreement date is required
-                  </span>
-                )}
-              </label>
-            </div>
-          </div>
+                </label>
+                <label className="grid gap-1">
+                  <span className="text-sm">Bill Date</span>
+                  <Controller
+                    name="date"
+                    control={form.control}
+                    render={({ field }) => (
+                      <DatePicker
+                        selected={field.value ? new Date(field.value) : null}
+                        onChange={(date) => {
+                          if (date) {
+                            field.onChange(format(date, "yyyy-MM-dd"));
+                          }
+                        }}
+                        dateFormat="dd/MM/yyyy"
+                        placeholderText="Select date"
+                        className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    )}
+                  />
+                  {form.formState.errors.date && (
+                    <span className="text-xs text-red-600">
+                      Date is required
+                    </span>
+                  )}
+                </label>
+                <label className="grid gap-1">
+                  <span className="text-sm">Bill Number</span>
+                  <div className="relative">
+                    <input
+                      className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-10"
+                      placeholder="Enter bill number"
+                      {...form.register("bill_number")}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const randomBillNumber = `BILL-${uuidv4()
+                          .slice(0, 8)
+                          .toUpperCase()}`;
+                        form.setValue("bill_number", randomBillNumber);
+                      }}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
+                      title="Generate random bill number"
+                    >
+                      <svg
+                        className="w-4 h-4 text-gray-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </label>
+              </CardContent>
+            </Card>
 
-          <div className="rounded-md ring-1 ring-inset p-3 sm:p-4 grid gap-3 sm:gap-4">
-            <div className="text-sm font-semibold opacity-80">
-              Payment & Signature
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 min-w-0">
-              <label className="grid gap-1">
-                <span className="text-sm">Rate (Rs./P.M)</span>
-                <input
-                  className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
-                  placeholder="e.g. 12000"
-                  {...form.register("rate")}
-                />
-                {form.formState.errors.rate && (
-                  <span className="text-xs text-red-600">
-                    {form.formState.errors.rate.message as string}
-                  </span>
-                )}
-              </label>
-              <label className="grid gap-1">
-                <span className="text-sm">Amount (Rs.)</span>
-                <input
-                  className="ring-1 ring-inset rounded px-3 py-2 bg-transparent w-full"
-                  placeholder="e.g. 12000"
-                  {...form.register("amount")}
-                />
-                {form.formState.errors.amount && (
-                  <span className="text-xs text-red-600">
-                    {form.formState.errors.amount.message as string}
-                  </span>
-                )}
-              </label>
-              <label className="grid gap-1">
-                <span className="text-sm">Signature Image (optional)</span>
-                {/* Hidden real input */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const reg = form.register("signature_file");
-                    reg.onChange(e);
-                    const file = e.target.files?.[0];
-                    setSignatureFileName(file ? file.name : null);
-                    // Immediately set signature_url so preview uses the newly selected image
-                    if (file) {
-                      fileToDataUrl(file)
-                        .then((dataUrl) => {
-                          form.setValue("signature_url", dataUrl);
-                        })
-                        .catch(() => {
-                          // ignore
-                        });
-                    } else {
-                      form.setValue("signature_url", null);
-                    }
-                  }}
-                />
-                {/* Visible proxy control */}
-                <button
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Landlord</CardTitle>
+                <CardDescription>Choose a saved landlord or enter details manually.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex items-center gap-2">
+                <Button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="ring-1 ring-inset rounded px-3 py-2 w-full text-left bg-transparent hover:bg-foreground/5"
-                  aria-label="Choose signature image file"
+                  variant={landlordMode === "existing" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => form.setValue("landlord_mode", "existing")}
                 >
-                  {(() => {
-                    const existing =
-                      landlordMode === "existing" && landlordIdExisting
-                        ? landlords.find((l) => l.id === landlordIdExisting)
-                        : undefined;
-                    const displayName =
-                      signatureFileName || existing?.signature_name || null;
-                    return (
-                      <span className="opacity-80">
-                        Choose File {displayName ?? "No file chosen"}
+                  Existing
+                </Button>
+                <Button
+                  type="button"
+                  variant={landlordMode === "manual" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => form.setValue("landlord_mode", "manual")}
+                >
+                  Manual
+                </Button>
+              </CardContent>
+
+              <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 min-w-0">
+                {landlordMode === "existing" ? (
+                  <label className="grid gap-1">
+                    <span className="text-sm">Saved Landlords</span>
+                    <select
+                      className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      value={landlordIdExisting}
+                      onChange={(e) =>
+                        form.setValue("landlord_id", e.target.value)
+                      }
+                    >
+                      {landlords.length === 0 ? (
+                        <option value="" disabled>
+                          No landlords saved
+                        </option>
+                      ) : null}
+                      {landlords.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.name}
+                        </option>
+                      ))}
+                    </select>
+                    {form.formState.errors.landlord_id && (
+                      <span className="text-xs text-red-600">
+                        {form.formState.errors.landlord_id.message as string}
                       </span>
-                    );
-                  })()}
-                </button>
-                {landlordMode === "existing" &&
-                  (() => {
-                    const existing = landlords.find(
-                      (l) => l.id === landlordIdExisting
-                    );
-                    if (existing?.signature_url) {
-                      const name = existing.signature_name ?? null;
+                    )}
+                  </label>
+                ) : (
+                  <label className="grid gap-1">
+                    <span className="text-sm">Landlord Name</span>
+                    <input
+                      className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Type landlord name"
+                      {...form.register("landlord_name")}
+                    />
+                    {form.formState.errors.landlord_name && (
+                      <span className="text-xs text-red-600">
+                        {form.formState.errors.landlord_name.message as string}
+                      </span>
+                    )}
+                  </label>
+                )}
+
+                <label className="grid gap-1">
+                  <span className="text-sm">Agreement Date</span>
+                  <Controller
+                    name="agreement_date"
+                    control={form.control}
+                    render={({ field }) => (
+                      <DatePicker
+                        selected={field.value ? new Date(field.value) : null}
+                        onChange={(date) => {
+                          if (date) {
+                            field.onChange(format(date, "yyyy-MM-dd"));
+                          }
+                        }}
+                        dateFormat="dd/MM/yyyy"
+                        placeholderText="Select agreement date"
+                        className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-background px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    )}
+                  />
+                  {form.formState.errors.agreement_date && (
+                    <span className="text-xs text-red-600">
+                      Agreement date is required
+                    </span>
+                  )}
+                </label>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Payment & Signature</CardTitle>
+                <CardDescription>Enter rent amount and optionally attach a signature image.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 min-w-0">
+                <label className="grid gap-1">
+                  <span className="text-sm">Rate (Rs./P.M)</span>
+                  <input
+                    className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g. 12000"
+                    {...form.register("rate")}
+                  />
+                  {form.formState.errors.rate && (
+                    <span className="text-xs text-red-600">
+                      {form.formState.errors.rate.message as string}
+                    </span>
+                  )}
+                </label>
+                <label className="grid gap-1">
+                  <span className="text-sm">Amount (Rs.)</span>
+                  <input
+                    className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g. 12000"
+                    {...form.register("amount")}
+                  />
+                  {form.formState.errors.amount && (
+                    <span className="text-xs text-red-600">
+                      {form.formState.errors.amount.message as string}
+                    </span>
+                  )}
+                </label>
+                <label className="grid gap-1">
+                  <span className="text-sm">Signature Image (optional)</span>
+                  {/* Hidden real input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const reg = form.register("signature_file");
+                      reg.onChange(e);
+                      const file = e.target.files?.[0];
+                      setSignatureFileName(file ? file.name : null);
+                      // Immediately set signature_url so preview uses the newly selected image
+                      if (file) {
+                        fileToDataUrl(file)
+                          .then((dataUrl) => {
+                            form.setValue("signature_url", dataUrl);
+                          })
+                          .catch(() => {
+                            // ignore
+                          });
+                      } else {
+                        form.setValue("signature_url", null);
+                      }
+                    }}
+                  />
+                  {/* Visible proxy control */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    aria-label="Choose signature image file"
+                  >
+                    {(() => {
+                      const existing =
+                        landlordMode === "existing" && landlordIdExisting
+                          ? landlords.find((l) => l.id === landlordIdExisting)
+                          : undefined;
+                      const displayName =
+                        signatureFileName || existing?.signature_name || null;
                       return (
-                        <span className="text-xs opacity-70">
-                          Using saved signature{name ? `: ${name}` : ""} from
-                          selected landlord. Upload a file to replace.
+                        <span className="opacity-80">
+                          Choose File {displayName ?? "No file chosen"}
                         </span>
                       );
-                    }
-                    return null;
-                  })()}
-              </label>
-            </div>
-          </div>
+                    })()}
+                  </Button>
+                  {landlordMode === "existing" &&
+                    (() => {
+                      const existing = landlords.find(
+                        (l) => l.id === landlordIdExisting
+                      );
+                      if (existing?.signature_url) {
+                        const name = existing.signature_name ?? null;
+                        return (
+                          <span className="text-xs opacity-70">
+                            Using saved signature{name ? `: ${name}` : ""} from
+                            selected landlord. Upload a file to replace.
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
+                </label>
+              </CardContent>
+            </Card>
 
-          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
-            <button
-              disabled={saving}
-              className="px-4 py-2 rounded bg-foreground text-background disabled:opacity-50 w-full sm:w-auto"
-              type="submit"
-            >
-              {saving ? "Saving..." : "Save & Preview"}
-            </button>
-            {previewHtml && (
-              <>
-                <button
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
+              <Button disabled={saving} type="submit">
+                {saving ? "Saving..." : "Save & Preview"}
+              </Button>
+            </div>
+          </form>
+        )}
+        {previewHtml && (
+          <div className="mt-6 md:mt-0 md:sticky md:top-4 border border-gray-300 dark:border-gray-700 rounded-lg p-2 sm:p-4 responsive-pane w-full max-w-3xl mx-auto h-[calc(100vh-120px)] overflow-auto bg-white dark:bg-gray-900">
+            <div className="sticky top-0 z-10 bg-white/85 dark:bg-gray-900/85 supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-gray-900/60 backdrop-blur flex items-center justify-between gap-3 py-2 border-b border-gray-200 dark:border-gray-700 mb-2">
+              <div className="text-sm font-semibold">Preview</div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={exportPdf}
-                  className="px-4 py-2 rounded ring-1 ring-inset w-full sm:w-auto"
+                  title="Download PDF"
                 >
                   Download PDF
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  onClick={exportDefaultVectorPdf}
-                  className="px-4 py-2 rounded ring-1 ring-inset w-full sm:w-auto"
+                  variant="outline"
+                  size="sm"
+                  onClick={
+                    selectedTemplateId
+                      ? exportTemplateVectorPdf
+                      : exportDefaultVectorPdf
+                  }
                   title="Vector (pdf-lib) exact layout"
                 >
                   Download PDF (vector)
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={printPreview}
-                  className="px-4 py-2 rounded ring-1 ring-inset w-full sm:w-auto"
+                  title="Print preview"
                 >
                   Print
-                </button>
-              </>
-            )}
-          </div>
-        </form>
-      )}
-
-      {previewHtml && (
-        <div className="mt-6 ring-1 ring-inset rounded p-2 sm:p-4 responsive-pane w-full max-w-3xl mx-auto">
-          <div className="text-sm font-semibold mb-2">Preview</div>
-          <div ref={previewContainerRef} className="w-full overflow-auto">
-            {/* Reserve scaled space to prevent clipping */}
-            <div
-              className="mx-auto"
-              style={{
-                width: `${Math.round(794 * previewScale)}px`,
-                height: `${Math.round(baseHeight * previewScale)}px`,
-                position: "relative",
-              }}
-            >
+                </Button>
+              </div>
+            </div>
+            <div ref={previewContainerRef} className="w-full">
+              {/* Reserve scaled space to prevent clipping */}
               <div
-                ref={previewInnerRef}
+                className="mx-auto"
                 style={{
-                  transform: `scale(${previewScale})`,
-                  transformOrigin: "top left",
-                  width: "794px",
+                  width: `${Math.round(794 * previewScale)}px`,
+                  height: `${Math.round(baseHeight * previewScale)}px`,
+                  position: "relative",
                 }}
-                dangerouslySetInnerHTML={{ __html: previewHtml }}
-              />
+              >
+                <div
+                  ref={previewInnerRef}
+                  style={{
+                    transform: `scale(${previewScale})`,
+                    transformOrigin: "top left",
+                    width: "794px",
+                  }}
+                  dangerouslySetInnerHTML={{ __html: previewHtml as string }}
+                />
+              </div>
             </div>
           </div>
+        )}
+      </div>
+
+      {/* Global sticky footer actions */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/90 dark:bg-gray-900/90 supports-[backdrop-filter]:bg-white/70 dark:supports-[backdrop-filter]:bg-gray-900/70 backdrop-blur border-t border-gray-200 dark:border-gray-800">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-2 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              disabled={saving}
+              onClick={
+                selectedTemplateId
+                  ? submitFromTemplate
+                  : () => formRef.current?.requestSubmit()
+              }
+            >
+              {saving ? "Saving..." : "Save & Preview"}
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={exportPdf}
+              title="Download PDF"
+              disabled={!previewHtml}
+            >
+              Download PDF
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={
+                selectedTemplateId ? exportTemplateVectorPdf : exportDefaultVectorPdf
+              }
+              title="Vector (pdf-lib) exact layout"
+              disabled={!previewHtml}
+            >
+              Download PDF (vector)
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={printPreview}
+              title="Print preview"
+              disabled={!previewHtml}
+            >
+              Print
+            </Button>
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
