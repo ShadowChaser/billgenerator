@@ -19,7 +19,10 @@ export default function HeaderNavRefactored() {
     { href: "/landlords", label: "Landlords" },
   ];
 
-  const isActive = (href: string) => pathname === href || (href !== "/" && pathname.startsWith(href));
+  const isActive = (href: string) => {
+    if (href === "/bills") return pathname === "/bills";
+    return pathname === href || (href !== "/" && pathname.startsWith(href));
+  };
 
   const linkClass = (href: string) => {
     const active = isActive(href);

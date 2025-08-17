@@ -12,7 +12,6 @@ import type { Landlord, Bill } from "@/lib/types";
 
 import { Button } from "@/components/ui/button";
 import { PreviewPanel } from "@/components/PreviewPanel";
-import { FooterActions } from "@/components/FooterActions";
 import { PaymentSignatureSection } from "@/components/PaymentSignatureSection";
 import { BillDetailsSection } from "@/components/BillDetailsSection";
 import { LandlordSection } from "@/components/LandlordSection";
@@ -66,6 +65,7 @@ export default function NewBillPage() {
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [saving, setSaving] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [showUploadHelp, setShowUploadHelp] = useState(false);
   const { previewContainerRef, previewInnerRef, previewScale, baseHeight } =
     usePreviewLayout(previewHtml);
   // Track pending file reads for template image/signature fields to avoid race conditions
@@ -134,6 +134,7 @@ export default function NewBillPage() {
     templates.find((t) => t.id === selectedTemplateId) || null;
   const [templateForm, setTemplateForm] = useState<Record<string, string>>({});
   const [templateErrors, setTemplateErrors] = useState<string[]>([]);
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
 
   // Landlord signature sync + file input/name management
   const { signatureFileName, setSignatureFileName, fileInputRef } =
@@ -775,26 +776,40 @@ export default function NewBillPage() {
     });
 
   return (
-    <div className="h-screen overflow-hidden">
-      <div className="grid gap-6 max-w-6xl mx-auto px-3 sm:px-6 pt-6 sm:pt-8 pb-28 sm:pb-32 overflow-auto min-w-0 h-full">
-        <div className="flex items-start justify-between gap-3">
+    <div className="min-h-screen">
+      <div className="grid gap-6 max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-3 sm:px-6 pt-6 sm:pt-8 pb-20 sm:pb-24 min-w-0">
+        {/* Header with primary action (non-sticky) */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              House Rent Bill
-            </h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Create, preview, and export a professional house rent bill.
-            </p>
+            <CardTitle className="text-base">New Bill</CardTitle>
+            <CardDescription>Create, preview, and export a professional house rent bill.</CardDescription>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <Button
+              type="button"
+              disabled={saving}
+              onClick={() => {
+                if (selectedTemplateId) {
+                  submitFromTemplate();
+                } else {
+                  formRef.current?.requestSubmit();
+                }
+              }}
+              title="Save and update preview"
+            >
+              {saving ? "Saving..." : "Save & Preview"}
+            </Button>
+            <span className="text-xs text-gray-500">Updates the preview on the right.</span>
           </div>
         </div>
 
-        {/* Template (optional) selector */}
+        {/* Template selector following requested pattern */}
         <Card className="w-full md:col-span-2">
           <CardHeader className="flex items-center justify-between gap-3 sm:flex-row sm:items-center">
             <div>
-              <CardTitle className="text-base">Template (optional)</CardTitle>
+              <CardTitle className="text-base">Template</CardTitle>
               <CardDescription>
-                Use a saved template or continue with the default layout.
+                Pick a saved template or continue with the default layout.
               </CardDescription>
             </div>
             <Button
@@ -806,35 +821,45 @@ export default function NewBillPage() {
               Reload
             </Button>
           </CardHeader>
-          <CardContent>
-            <label className="grid gap-1">
-              <span className="text-sm">Choose a saved template</span>
-              <select
-                className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={selectedTemplateId}
-                onChange={(e) => setSelectedTemplateId(e.target.value)}
-                onFocus={loadTemplates}
-              >
-                <option value="">— None (use default House Bill) —</option>
-                {templates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+          <CardContent className="space-y-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowTemplateSelector((v) => !v)}
+            >
+              Use template
+            </Button>
+            {showTemplateSelector && (
+              <label className="grid gap-1">
+                <span className="text-sm">Choose a saved template</span>
+                <select
+                  className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={selectedTemplateId}
+                  onChange={(e) => setSelectedTemplateId(e.target.value)}
+                  onFocus={loadTemplates}
+                >
+                  <option value="">— None (use default House Bill) —</option>
+                  {templates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
           </CardContent>
         </Card>
 
         {/* If a template is selected, show template UI + PdfUpload; else show the original form unchanged */}
-        <div className="grid items-start gap-8 md:grid-cols-[3fr_4fr]">
+        <div className="grid grid-cols-12 items-start gap-5 md:gap-5 xl:gap-6">
           {selectedTemplateId ? (
-            <div className="flex flex-col gap-6 w-full">
+            <div className="col-span-12 md:col-span-6 xl:col-span-6 flex flex-col gap-4 w-full">
               {(() => {
                 const tpl = selectedTemplate;
                 return (
                   <Card>
-                    <CardHeader>
+                    <CardHeader className="pb-3">
                       <CardTitle className="text-base">
                         Selected Template
                       </CardTitle>
@@ -849,24 +874,49 @@ export default function NewBillPage() {
                 );
               })()}
 
-              <div className="overflow-visible">
-                <PdfUpload
-                  onFieldsExtracted={handleFieldsExtracted}
-                  onNextMonthBill={handleNextMonthBill}
-                  disabled={saving}
-                />
-              </div>
+              <Card className="overflow-visible">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Upload</CardTitle>
+                  <CardDescription>
+                    Drag and drop a file here or click to upload
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <PdfUpload
+                    onFieldsExtracted={handleFieldsExtracted}
+                    onNextMonthBill={handleNextMonthBill}
+                    disabled={saving}
+                  />
+                  <p className="text-xs text-gray-500 mt-2 hidden lg:block">
+                    Upload files in PDF, DOCX, or image formats
+                  </p>
+                  <div className="lg:hidden mt-2">
+                    <button
+                      type="button"
+                      className="text-xs text-blue-500 hover:underline"
+                      onClick={() => setShowUploadHelp((v) => !v)}
+                    >
+                      {showUploadHelp ? "Hide details" : "Show details"}
+                    </button>
+                    {showUploadHelp && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Supported formats: PDF (.pdf), Word (.docx), Images (.png, .jpg, .jpeg, .webp). Best results with bills generated here; scanned or complex layouts may not parse fully.
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Dynamic fields for selected template */}
               {selectedTemplate && (
                 <Card>
-                  <CardHeader>
+                  <CardHeader className="pb-3">
                     <CardTitle className="text-base">Template Fields</CardTitle>
                     <CardDescription>
                       Fill the values used to render the template.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="grid grid-cols-1 gap-4">
+                  <CardContent className="pt-0 grid grid-cols-1 gap-4">
                     {selectedTemplate.fields.map((f) => {
                       const val = templateForm[f.id] ?? "";
                       const setVal = (v: string) =>
@@ -996,8 +1046,8 @@ export default function NewBillPage() {
                 </div>
               )}
 
-              {/* Primary action only; export/print live in the Preview toolbar */}
-              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
+              {/* Primary action (non-sticky) */}
+              <div className="pt-2">
                 <Button
                   type="button"
                   disabled={saving}
@@ -1008,27 +1058,53 @@ export default function NewBillPage() {
               </div>
             </div>
           ) : (
-            <form
-              ref={formRef}
-              className="flex flex-col gap-6 w-full min-w-0 break-words"
-              onSubmit={form.handleSubmit(onSubmit)}
-            >
-              <div className="overflow-visible">
-                <PdfUpload
-                  onFieldsExtracted={handleFieldsExtracted}
-                  onNextMonthBill={handleNextMonthBill}
-                  disabled={saving}
-                />
-              </div>
+            <div className="col-span-12 md:col-span-6 xl:col-span-6">
+              <form
+                ref={formRef}
+                className="flex flex-col gap-4 w-full min-w-0 break-words"
+                onSubmit={form.handleSubmit(onSubmit)}
+              >
+              <Card className="overflow-visible">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Upload</CardTitle>
+                  <CardDescription>
+                    Drag and drop a file here or click to upload
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <PdfUpload
+                    onFieldsExtracted={handleFieldsExtracted}
+                    onNextMonthBill={handleNextMonthBill}
+                    disabled={saving}
+                  />
+                  <p className="text-xs text-gray-500 mt-2 hidden lg:block">
+                    Upload files in PDF, DOCX, or image formats
+                  </p>
+                  <div className="lg:hidden mt-2">
+                    <button
+                      type="button"
+                      className="text-xs text-blue-500 hover:underline"
+                      onClick={() => setShowUploadHelp((v) => !v)}
+                    >
+                      {showUploadHelp ? "Hide details" : "Show details"}
+                    </button>
+                    {showUploadHelp && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Supported formats: PDF (.pdf), Word (.docx), Images (.png, .jpg, .jpeg, .webp). Best results with bills generated here; scanned or complex layouts may not parse fully.
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Bill details</CardTitle>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Bill Details</CardTitle>
                   <CardDescription>
                     Set the billing month, date, and number.
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0">
                   <BillDetailsSection
                     form={form}
                     onGenerateBillNumber={() => {
@@ -1042,13 +1118,13 @@ export default function NewBillPage() {
               </Card>
 
               <Card>
-                <CardHeader>
+                <CardHeader className="pb-3">
                   <CardTitle className="text-base">Landlord</CardTitle>
                   <CardDescription>
                     Choose a saved landlord or enter details manually.
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0">
                   <LandlordSection
                     form={form}
                     landlordMode={landlordMode}
@@ -1059,7 +1135,7 @@ export default function NewBillPage() {
               </Card>
 
               <Card>
-                <CardHeader>
+                <CardHeader className="pb-3">
                   <CardTitle className="text-base">
                     Payment & Signature
                   </CardTitle>
@@ -1067,7 +1143,7 @@ export default function NewBillPage() {
                     Enter rent amount and optionally attach a signature image.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 min-w-0">
+                <CardContent className="pt-0 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 min-w-0">
                   <label className="grid gap-1">
                     <span className="text-sm">Rate (Rs./P.M)</span>
                     <input
@@ -1094,43 +1170,35 @@ export default function NewBillPage() {
                 </CardContent>
               </Card>
 
-              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
+              {/* Primary action (non-sticky) */}
+              <div className="pt-2">
                 <Button disabled={saving} type="submit">
                   {saving ? "Saving..." : "Save & Preview"}
                 </Button>
               </div>
-            </form>
+              </form>
+            </div>
           )}
           {previewHtml && (
-            <PreviewPanel
-              title="Preview"
-              previewHtml={previewHtml}
-              previewScale={previewScale}
-              baseHeight={baseHeight}
-              previewContainerRef={previewContainerRef}
-              previewInnerRef={previewInnerRef}
-              onExportPdf={exportPdf}
-              onExportVectorPdf={
-                selectedTemplateId ? exportTemplateVectorPdf : exportDefaultVectorPdf
-              }
-              onPrint={printPreview}
-            />
+            <div className="col-span-12 md:col-span-6 xl:col-span-6">
+              <PreviewPanel
+                title="Preview"
+                previewHtml={previewHtml}
+                previewScale={previewScale}
+                baseHeight={baseHeight}
+                previewContainerRef={previewContainerRef}
+                previewInnerRef={previewInnerRef}
+                onExportPdf={exportPdf}
+                onExportVectorPdf={
+                  selectedTemplateId ? exportTemplateVectorPdf : exportDefaultVectorPdf
+                }
+                onPrint={printPreview}
+              />
+            </div>
           )}
         </div>
 
-        {/* Global sticky footer actions */}
-        <FooterActions
-          saving={saving}
-          selectedTemplateId={selectedTemplateId}
-          onSaveAndPreviewTemplate={submitFromTemplate}
-          onSaveAndPreviewForm={() => formRef.current?.requestSubmit()}
-          onExportPdf={exportPdf}
-          onExportVectorPdf={
-            selectedTemplateId ? exportTemplateVectorPdf : exportDefaultVectorPdf
-          }
-          onPrint={printPreview}
-          previewHtml={previewHtml}
-        />
+        {/* Footer removed */}
       </div>
     </div>
   );

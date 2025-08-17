@@ -17,7 +17,11 @@ export default function HeaderNav() {
     { href: "/landlords", label: "Landlords" },
   ];
 
-  const isActive = (href: string) => pathname === href || (href !== "/" && pathname.startsWith(href));
+  const isActive = (href: string) => {
+    // Only highlight parent index routes on exact match
+    if (href === "/bills") return pathname === "/bills";
+    return pathname === href || (href !== "/" && pathname.startsWith(href));
+  };
 
   const linkClass = (href: string) => {
     const active = isActive(href);

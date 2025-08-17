@@ -19,6 +19,8 @@ export default function PdfUpload({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [fileName, setFileName] = useState<string | null>(null);
 
   const extractTextFromPdf = async (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -125,6 +127,99 @@ export default function PdfUpload({
       console.error("Error in DOCX extraction:", err);
       throw err;
     }
+  };
+
+  const processFile = async (file: File) => {
+    const name = file.name.toLowerCase();
+    const isPdf = name.endsWith(".pdf") || file.type.includes("pdf");
+    const isDocx = name.endsWith(".docx") || file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    const isDoc = name.endsWith(".doc");
+    const isImage =
+      ["image/png", "image/jpeg", "image/webp"].includes(file.type) ||
+      name.endsWith(".png") ||
+      name.endsWith(".jpg") ||
+      name.endsWith(".jpeg") ||
+      name.endsWith(".webp");
+
+    if (!isPdf && !isDocx && !isImage) {
+      setError("Please select a PDF, DOCX, or Image file (.pdf, .docx, .png, .jpg, .jpeg, .webp). Legacy .doc is not supported in-browser.");
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const text = isPdf
+        ? await extractTextFromPdf(file)
+        : isDocx
+        ? await extractTextFromDocx(file)
+        : isImage
+        ? await extractTextFromImage(file)
+        : (() => {
+            if (isDoc) {
+              throw new Error(
+                "Legacy .doc files are not supported in the browser. Please convert to .docx or PDF."
+              );
+            }
+            throw new Error("Unsupported file type.");
+          })();
+      const extractedFields = extractFieldsFromText(text);
+      if (Object.keys(extractedFields).length === 0) {
+        setError(
+          "No relevant information found in the file. Please check if it contains bill details."
+        );
+      } else {
+        onFieldsExtracted(extractedFields);
+        localStorage.setItem("lastExtractedFields", JSON.stringify(extractedFields));
+        const fieldCount = Object.keys(extractedFields).length;
+        setSuccess(`Successfully extracted ${fieldCount} field(s) from the file${fileName ? `: ${fileName}` : ""}!`);
+        setError(null);
+      }
+    } catch (err) {
+      console.error("Error processing file:", err);
+      if (err instanceof Error) {
+        setError(`Failed to process file: ${err.message}`);
+      } else {
+        setError("Failed to process file. Please try again.");
+      }
+    } finally {
+      setIsProcessing(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (disabled || isProcessing) return;
+    setIsDragOver(false);
+    const dt = e.dataTransfer;
+    const file = dt?.files?.[0];
+    if (file) {
+      setFileName(file.name);
+      await processFile(file);
+    }
+  };
+
+  const onDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (disabled || isProcessing) return;
+    setIsDragOver(true);
+  };
+  const onDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+  const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (disabled || isProcessing) return;
+    e.dataTransfer.dropEffect = "copy";
+    setIsDragOver(true);
   };
 
   // Extract text from image files using Tesseract OCR
@@ -515,6 +610,7 @@ export default function PdfUpload({
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    setFileName(file.name);
 
     const name = file.name.toLowerCase();
     const isPdf = name.endsWith(".pdf") || file.type.includes("pdf");
@@ -598,64 +694,73 @@ export default function PdfUpload({
   };
 
   return (
-    <div className="rounded-md ring-1 ring-inset p-4 grid gap-4 min-w-0 overflow-visible">
-      <div className="text-sm font-semibold opacity-80">
-        Auto-fill from PDF, Word, or Image (.pdf, .docx, .png, .jpg, .jpeg, .webp)
-      </div>
-      <div className="text-xs rounded-md ring-1 ring-amber-300 bg-amber-50 text-amber-800 p-3 flex items-start gap-2 break-words">
-        <span className="select-none">⚠️</span>
+    <div className="grid gap-4 min-w-0 overflow-visible">
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label="Drag and drop a file here or click to upload"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
+        }}
+        onClick={() => fileInputRef.current?.click()}
+        onDragEnter={onDragEnter}
+        onDragLeave={onDragLeave}
+        onDragOver={onDragOver}
+        onDrop={handleDrop}
+        className={`drag-zone h-24 flex items-center justify-center text-center px-4 transition-colors ${
+          isDragOver ? "drag-over" : ""
+        } ${disabled ? "opacity-50 pointer-events-none" : "cursor-pointer"}`}
+      >
         <div>
-          <div className="font-semibold">Important</div>
-          <div>
-            Uploads work best with bills generated from this page. Other PDFs/Word/images may not be detected correctly.
-            If parsing fails or results look wrong, please fill the form manually.
+          <div className="type-body text-[var(--text-secondary)]">
+            Drag and drop a file here or click to upload
+          </div>
+          <div className="type-label text-[var(--text-secondary)] mt-1">
+            {fileName ? `Selected: ${fileName}` : "Upload files in PDF, DOCX, or image formats"}
           </div>
         </div>
       </div>
 
-      <div className="grid gap-2 min-w-0">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf,.docx,.png,.jpg,.jpeg,.webp"
-          onChange={handleFileUpload}
-          disabled={disabled || isProcessing}
-          className="ring-1 ring-inset rounded px-3 py-2 bg-transparent disabled:opacity-50 w-full"
-        />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.docx,.png,.jpg,.jpeg,.webp"
+        onChange={handleFileUpload}
+        disabled={disabled || isProcessing}
+        aria-label="File input for upload"
+        className="sr-only"
+      />
 
-        {isProcessing && (
-          <div className="text-sm text-blue-600">
-            Processing file (may take longer for scanned documents)... Please wait.
-          </div>
-        )}
-
-        {error && <div className="text-sm text-red-600">{error}</div>}
-
-        {success && <div className="text-sm text-green-600 break-words">{success}</div>}
-
-        {success && onNextMonthBill && (
-          <button
-            type="button"
-            onClick={() => {
-              // Get the last extracted fields and create next month data
-              const lastExtractedFields = JSON.parse(
-                localStorage.getItem("lastExtractedFields") || "{}"
-              );
-              const nextMonthFields =
-                generateNextMonthFields(lastExtractedFields);
-              onNextMonthBill(nextMonthFields);
-            }}
-            className="mt-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
-          >
-            📅 Next Month Bill
-          </button>
-        )}
-
-        <div className="text-xs text-gray-500 break-words">
-          Upload a PDF, DOCX, or image bill to automatically extract and fill in the form fields.
-          Supported formats: PDF (.pdf), Word (.docx), Images (.png, .jpg, .jpeg, .webp). Supported fields: Landlord name, amount,
-          rate, bill number, dates, and period. Best results with bills generated here; scanned or complex layouts may not parse fully.
+      {isProcessing && (
+        <div className="text-sm text-blue-600">
+          Processing file (may take longer for scanned documents)... Please wait.
         </div>
+      )}
+
+      {error && <div className="text-sm text-red-600">{error}</div>}
+
+      {success && <div className="text-sm text-green-600 break-words">{success}</div>}
+
+      {success && onNextMonthBill && (
+        <button
+          type="button"
+          onClick={() => {
+            const lastExtractedFields = JSON.parse(
+              localStorage.getItem("lastExtractedFields") || "{}"
+            );
+            const nextMonthFields = generateNextMonthFields(lastExtractedFields);
+            onNextMonthBill(nextMonthFields);
+          }}
+          className="mt-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
+        >
+          📅 Next Month Bill
+        </button>
+      )}
+
+      <div className="text-xs text-gray-500 break-words">
+        Upload a PDF, DOCX, or image bill to automatically extract and fill in the form fields.
+        Supported formats: PDF (.pdf), Word (.docx), Images (.png, .jpg, .jpeg, .webp). Supported fields: Landlord name, amount,
+        rate, bill number, dates, and period. Best results with bills generated here; scanned or complex layouts may not parse fully.
       </div>
     </div>
   );
