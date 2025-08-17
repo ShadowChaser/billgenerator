@@ -51,6 +51,12 @@ export default function AdvancedBillGeneratorPage() {
   );
   const [showTemplateSettings, setShowTemplateSettings] = useState(false);
 
+  // Editor view controls
+  const [zoom, setZoom] = useState<number>(1); // 1 = 100%
+  const [showGrid, setShowGrid] = useState<boolean>(false);
+  const [snapToGrid, setSnapToGrid] = useState<boolean>(false);
+  const [gridSize, setGridSize] = useState<number>(12);
+
   // New template chooser modal
   const [showNewTemplateChooser, setShowNewTemplateChooser] = useState(false);
 
@@ -165,6 +171,11 @@ export default function AdvancedBillGeneratorPage() {
           saveStateForUndo();
           deleteField(selectedField.id);
         }
+      } else if (e.key === "Escape") {
+        if (selectedField) {
+          e.preventDefault();
+          setSelectedField(null);
+        }
       }
     };
 
@@ -199,6 +210,10 @@ export default function AdvancedBillGeneratorPage() {
     startInlineEdit,
     canvasRef: templateCanvasRef,
     inlineEditFieldId: inlineEditField?.id || null,
+    zoom,
+    showGrid,
+    snapToGrid,
+    gridSize,
   });
 
   // insertTemplateWithLimit moved to hook
@@ -504,6 +519,15 @@ const exportCurrentCanvasToPdf = () => {
               } catch {}
             }}
             onSaveTemplate={saveTemplate}
+            // view controls
+            zoom={zoom}
+            onZoomChange={setZoom}
+            showGrid={showGrid}
+            onToggleGrid={() => setShowGrid((v) => !v)}
+            snapToGrid={snapToGrid}
+            onToggleSnap={() => setSnapToGrid((v) => !v)}
+            gridSize={gridSize}
+            onGridSizeChange={setGridSize}
             canvasContainerSize={canvasContainerSize as any}
             canvasRef={templateCanvasRef as any}
             onMouseDown={onMouseDown}

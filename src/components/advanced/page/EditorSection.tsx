@@ -25,6 +25,15 @@ interface Props {
   onExportJson: () => void;
   onUseInCustom: () => void;
   onSaveTemplate: () => void;
+  // View controls
+  zoom: number;
+  onZoomChange: (z: number) => void;
+  showGrid: boolean;
+  onToggleGrid: () => void;
+  snapToGrid: boolean;
+  onToggleSnap: () => void;
+  gridSize: number;
+  onGridSizeChange: (n: number) => void;
   // Canvas props
   canvasContainerSize: { width: number; height: number } | null;
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -60,6 +69,15 @@ const EditorSection: React.FC<Props> = ({
   onExportJson,
   onUseInCustom,
   onSaveTemplate,
+  // view controls
+  zoom,
+  onZoomChange,
+  showGrid,
+  onToggleGrid,
+  snapToGrid,
+  onToggleSnap,
+  gridSize,
+  onGridSizeChange,
   canvasContainerSize,
   canvasRef,
   onMouseDown,
@@ -99,13 +117,56 @@ const EditorSection: React.FC<Props> = ({
               ✏️ Edit Template
             </Button>
           ) : (
-            <ExportButtons
-              onAddField={onAddField}
-              onExportPdf={onExportPdf}
-              onExportJson={onExportJson}
-              onUseInCustom={onUseInCustom}
-              onSaveTemplate={onSaveTemplate}
-            />
+            <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+              <ExportButtons
+                onAddField={onAddField}
+                onExportPdf={onExportPdf}
+                onExportJson={onExportJson}
+                onUseInCustom={onUseInCustom}
+                onSaveTemplate={onSaveTemplate}
+              />
+              <div className="flex flex-wrap items-center gap-2 md:gap-3 bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 rounded-md p-2">
+                {/* Zoom */}
+                <label className="text-xs text-gray-600 dark:text-gray-300">
+                  Zoom
+                </label>
+                <select
+                  className="px-2 py-1 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded"
+                  value={String(zoom)}
+                  onChange={(e) => onZoomChange(parseFloat(e.target.value))}
+                >
+                  <option value={"0.5"}>50%</option>
+                  <option value={"0.75"}>75%</option>
+                  <option value={"1"}>100% (Fit)</option>
+                  <option value={"1.25"}>125%</option>
+                  <option value={"1.5"}>150%</option>
+                </select>
+
+                {/* Grid toggle */}
+                <label className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
+                  <input type="checkbox" checked={showGrid} onChange={onToggleGrid} />
+                  Grid
+                </label>
+
+                {/* Snap toggle */}
+                <label className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
+                  <input type="checkbox" checked={snapToGrid} onChange={onToggleSnap} />
+                  Snap
+                </label>
+
+                {/* Grid size */}
+                <label className="text-xs text-gray-600 dark:text-gray-300">Grid</label>
+                <select
+                  className="px-2 py-1 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded"
+                  value={String(gridSize)}
+                  onChange={(e) => onGridSizeChange(parseInt(e.target.value))}
+                >
+                  <option value={"8"}>8px</option>
+                  <option value={"12"}>12px</option>
+                  <option value={"16"}>16px</option>
+                </select>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -142,6 +203,11 @@ const EditorSection: React.FC<Props> = ({
           onUploadImage={onUploadImage}
         />
       )}
+
+      {/* Shortcuts hint */}
+      <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+        <span className="font-medium">Shortcuts:</span> Delete: remove field • Ctrl+Z / Ctrl+Y: undo/redo • Double‑click a text to inline edit • Esc: clear selection
+      </div>
     </div>
   );
 };

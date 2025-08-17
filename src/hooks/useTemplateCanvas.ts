@@ -24,6 +24,11 @@ interface UseTemplateCanvasParams {
   startInlineEdit: (field: TemplateField) => void;
   canvasRef?: React.RefObject<HTMLCanvasElement | null>;
   inlineEditFieldId?: string | null;
+  // New optional controls
+  zoom?: number; // 1 = 100%
+  showGrid?: boolean;
+  snapToGrid?: boolean;
+  gridSize?: number; // in template units (px)
 }
 
 export function useTemplateCanvas({
@@ -37,6 +42,10 @@ export function useTemplateCanvas({
   startInlineEdit,
   canvasRef: externalCanvasRef,
   inlineEditFieldId,
+  zoom = 1,
+  showGrid = false,
+  snapToGrid = false,
+  gridSize = 12,
 }: UseTemplateCanvasParams) {
   const internalCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const canvasRef = externalCanvasRef ?? internalCanvasRef;
@@ -90,7 +99,8 @@ export function useTemplateCanvas({
     const cssH = canvasContainerSize?.height ?? currentTemplate.height;
     const displayScaleX = cssW / currentTemplate.width;
     const displayScaleY = cssH / currentTemplate.height;
-    const displayScale = Math.min(displayScaleX, displayScaleY);
+    const displayScaleBase = Math.min(displayScaleX, displayScaleY);
+    const displayScale = Math.max(0.1, displayScaleBase * Math.max(0.1, zoom));
 
     canvas.style.width = `${Math.round(currentTemplate.width * displayScale)}px`;
     canvas.style.height = `${Math.round(currentTemplate.height * displayScale)}px`;
@@ -130,6 +140,24 @@ export function useTemplateCanvas({
     ctx.clearRect(0, 0, currentTemplate.width, currentTemplate.height);
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, currentTemplate.width, currentTemplate.height);
+
+    // Optional grid overlay (drawn under fields)
+    if (showGrid && gridSize > 1) {
+      ctx.save();
+      ctx.strokeStyle = "#e5e7eb"; // tailwind gray-200
+      ctx.lineWidth = Math.max(px, 1);
+      ctx.beginPath();
+      for (let x = 0; x <= currentTemplate.width; x += gridSize) {
+        ctx.moveTo(x + 0.5, 0);
+        ctx.lineTo(x + 0.5, currentTemplate.height);
+      }
+      for (let y = 0; y <= currentTemplate.height; y += gridSize) {
+        ctx.moveTo(0, y + 0.5);
+        ctx.lineTo(currentTemplate.width, y + 0.5);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
 
     for (const field of currentTemplate.fields) {
       // When inline editing a text-like field, skip drawing it on the canvas to avoid double visuals
@@ -279,7 +307,7 @@ export function useTemplateCanvas({
         drawResizeHandlesExt(ctx, field, imageCacheRef);
       }
     }
-  }, [currentTemplate, selectedField, canvasContainerSize, inlineEditFieldId]);
+  }, [currentTemplate, selectedField, canvasContainerSize, inlineEditFieldId, zoom, showGrid, gridSize]);
 
   useEffect(() => {
     renderTemplate();
@@ -338,8 +366,12 @@ export function useTemplateCanvas({
     }
 
     if (isDraggingRef.current && selectedField) {
-      const nx = curX - dragOffsetRef.current.x;
-      const ny = curY - dragOffsetRef.current.y;
+      let nx = curX - dragOffsetRef.current.x;
+      let ny = curY - dragOffsetRef.current.y;
+      if (snapToGrid && gridSize > 1) {
+        nx = Math.round(nx / gridSize) * gridSize;
+        ny = Math.round(ny / gridSize) * gridSize;
+      }
       const canvasWidth = currentTemplate.width;
       const canvasHeight = currentTemplate.height;
       const constrainedX = Math.max(0, Math.min(nx, canvasWidth - selectedField.width));
@@ -413,6 +445,12 @@ export function useTemplateCanvas({
           newY = orig.y + dy;
           applyAspect();
           break;
+      }
+      if (snapToGrid && gridSize > 1) {
+        newX = Math.round(newX / gridSize) * gridSize;
+        newY = Math.round(newY / gridSize) * gridSize;
+        newW = Math.max(minSize, Math.round(newW / gridSize) * gridSize);
+        newH = Math.max(minSize, Math.round(newH / gridSize) * gridSize);
       }
       const canvasWidth = currentTemplate.width;
       const canvasHeight = currentTemplate.height;
