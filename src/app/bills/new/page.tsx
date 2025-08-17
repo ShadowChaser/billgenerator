@@ -8,6 +8,11 @@ import { v4 as uuidv4 } from "uuid";
 import type { Landlord, Bill } from "@/lib/types";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { Button } from "@/components/ui/button";
+import { PreviewPanel } from "@/components/PreviewPanel";
+import { FooterActions } from "@/components/FooterActions";
+import { PaymentSignatureSection } from "@/components/PaymentSignatureSection";
+import { BillDetailsSection } from "@/components/BillDetailsSection";
+import { LandlordSection } from "@/components/LandlordSection";
 import {
   Card,
   CardHeader,
@@ -473,6 +478,98 @@ export default function NewBillPage() {
     );
   };
 
+  // Build HTML for the default House Rent Bill (non-template) used for live preview
+  const buildDefaultPreviewHtml = (values: any) => {
+    const landlordNameForPdf = (() => {
+      if (values.landlord_mode === "existing" && values.landlord_id) {
+        const existing = landlords.find((l) => l.id === values.landlord_id);
+        return existing?.name ?? "";
+      }
+      return (values.landlord_name || "").toString();
+    })();
+
+    const amountFormatted = Number(values.amount || 0).toLocaleString("en-IN", {
+      maximumFractionDigits: 0,
+    });
+    const rateFormatted = (
+      values.rate ? Number(values.rate) : Number(values.amount || 0)
+    ).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+    const billDateDisplay = values.date
+      ? format(new Date(values.date), "dd-MM-yyyy")
+      : format(new Date(), "dd-MM-yyyy");
+    const agreementDisplay = values.agreement_date
+      ? format(new Date(values.agreement_date), "do MMMM yyyy")
+      : format(new Date(), "do MMMM yyyy");
+    const periodDisplay = monthInputToDisplay(
+      values.period || buildPeriodFromDate(new Date())
+    );
+
+    let signatureUrl: string | null = values.signature_url || null;
+    if (
+      !signatureUrl &&
+      values.landlord_mode === "existing" &&
+      values.landlord_id
+    ) {
+      const existing = landlords.find((l) => l.id === values.landlord_id);
+      if (existing?.signature_url) signatureUrl = existing.signature_url;
+    }
+
+    const billNo: string =
+      values.bill_number || `BILL-${uuidv4().slice(0, 8).toUpperCase()}`;
+
+    const html = `
+        <div style="position:relative; font-family:'Times New Roman', Times, serif; color:#000; width:794px; min-height:1123px; margin:0 auto; padding:24px 20px 180px 20px; background:#ffffff; box-sizing:border-box; overflow:visible;">
+          <div style="text-align:center; font-weight:700; font-size:18pt; text-decoration: underline;">HOUSE RENT BILL</div>
+
+          <div style="margin-top:20px; font-size:12pt;">
+            <div style="margin-bottom:10px; font-weight:700;">PERIOD OF BILL: <span style="font-weight:700;">${periodDisplay}</span></div>
+            <div style="display:flex; align-items:center; width:100%; font-weight:700;">
+              <div style="flex-shrink:0;">BILL NO: ${billNo}</div>
+              <div style="margin-left:auto; text-align:right;">DATE: ${billDateDisplay}</div>
+            </div>
+          </div>
+
+          <div style="margin-top:28px; font-size:12pt; line-height:1.45; max-width:100%;">
+            <div style="font-size:14pt;">Sir,</div>
+            <div>
+              I am submitting the House rent bill of Smt. ${landlordNameForPdf} (Private House) for accommodation of BtED,
+              Basta as per Agreement Dtd. <strong>${agreementDisplay}</strong> BETWEEN Executive Engineer, BtED, Basta and Smt. ${landlordNameForPdf} for the month of ${periodDisplay}
+            </div>
+          </div>
+
+          <table style="width:100%; border-collapse:collapse; text-align:center; margin-top:22px; font-size:12pt;">
+            <thead>
+              <tr>
+                <th style="border-bottom:1px solid #000; padding:8px 6px; text-align:left;">Description</th>
+                <th style="border-bottom:1px solid #000; padding:8px 6px;">Month</th>
+                <th style="border-bottom:1px solid #000; padding:8px 6px;">Rate</th>
+                <th style="border-bottom:1px solid #000; padding:8px 6px;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding:10px 6px; text-align:left;">HOUSE RENT</td>
+                <td style="padding:10px 6px;">${periodDisplay}</td>
+                <td style="padding:10px 6px;">Rs.${rateFormatted}/- P.M</td>
+                <td style="padding:10px 6px;">Rs.${amountFormatted}/-</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="position:absolute; right:20px; bottom:48px; text-align:right;">
+            ${
+              signatureUrl
+                ? `<img src="${signatureUrl}" alt="Signature" style="width:180px; height:auto; display:block; margin:0 0 8px auto;">`
+                : ``
+            }
+            <div style="font-size:12pt;">Signature of House</div>
+            <div style="font-size:12pt;">Owner</div>
+          </div>
+        </div>`;
+
+    return html;
+  };
+
   // Initialize/merge dynamic field values whenever selected template OR templates list changes
   useEffect(() => {
     if (selectedTemplate) {
@@ -538,6 +635,41 @@ export default function NewBillPage() {
     const r = requestAnimationFrame(measure);
     return () => cancelAnimationFrame(r);
   }, [previewHtml, previewScale]);
+
+  // Live preview: debounce updates when form or template values change
+  const livePreviewTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const trigger = () => {
+      if (livePreviewTimerRef.current) {
+        clearTimeout(livePreviewTimerRef.current);
+      }
+      livePreviewTimerRef.current = window.setTimeout(() => {
+        if (selectedTemplate) {
+          setPreviewHtml(
+            buildTemplatePreviewHtml(selectedTemplate, templateForm)
+          );
+        } else {
+          const values = form.getValues();
+          setPreviewHtml(buildDefaultPreviewHtml(values));
+        }
+      }, 250);
+    };
+
+    // Subscribe to all form changes
+    const subscription = form.watch(() => {
+      trigger();
+    });
+
+    // Trigger initially and when dependencies change
+    trigger();
+    return () => {
+      subscription.unsubscribe?.();
+      if (livePreviewTimerRef.current) {
+        clearTimeout(livePreviewTimerRef.current);
+      }
+    };
+  }, [form, selectedTemplate, selectedTemplateId, templateForm, landlords]);
 
   const landlordMode = form.watch("landlord_mode");
   const landlordNameManual = form.watch("landlord_name")?.trim() ?? "";
@@ -661,72 +793,13 @@ export default function NewBillPage() {
       }
 
       // Build preview HTML styled to match the provided sample
-      const landlordName = landlordNameForPdf;
-      const amountFormatted = Number(values.amount).toLocaleString("en-IN", {
-        maximumFractionDigits: 0,
-      });
-      const rateFormatted = values.rate
-        ? Number(values.rate).toLocaleString("en-IN", {
-            maximumFractionDigits: 0,
-          })
-        : amountFormatted;
-      const billDateDisplay = format(new Date(values.date), "dd-MM-yyyy");
-      const agreementDisplay = format(
-        new Date(values.agreement_date),
-        "do MMMM yyyy"
+      setPreviewHtml(
+        buildDefaultPreviewHtml({
+          ...values,
+          bill_number: finalBillNumber,
+          signature_url: signatureUrl,
+        })
       );
-      const periodDisplay = monthInputToDisplay(values.period);
-      const html = `
-        <div style="position:relative; font-family:'Times New Roman', Times, serif; color:#000; width:794px; min-height:1123px; margin:0 auto; padding:24px 20px 180px 20px; background:#ffffff; box-sizing:border-box; overflow:visible;">
-          <div style="text-align:center; font-weight:700; font-size:18pt; text-decoration: underline;">HOUSE RENT BILL</div>
-
-          <div style="margin-top:20px; font-size:12pt;">
-            <div style="margin-bottom:10px; font-weight:700;">PERIOD OF BILL: <span style="font-weight:700;">${periodDisplay}</span></div>
-            <div style="display:flex; justify-content:space-between; max-width:560px; font-weight:700;">
-              <div>BILL NO:${finalBillNumber}</div>
-              <div>DATE: ${billDateDisplay}</div>
-            </div>
-          </div>
-
-          <div style="margin-top:28px; font-size:12pt; line-height:1.45; max-width:100%;">
-            <div style="font-size:14pt;">Sir,</div>
-            <div>
-              I am submitting the House rent bill of Smt. ${landlordName} (Private House) for accommodation of BtED,
-              Basta as per Agreement Dtd. <strong>${agreementDisplay}</strong> BETWEEN Executive Engineer, BtED, Basta and Smt. ${landlordName} for the month of ${periodDisplay}
-            </div>
-          </div>
-
-          <table style="width:100%; border-collapse:collapse; text-align:center; margin-top:22px; font-size:12pt;">
-            <thead>
-              <tr>
-                <th style="border-bottom:1px solid #000; padding:8px 6px; text-align:left;">Description</th>
-                <th style="border-bottom:1px solid #000; padding:8px 6px;">Month</th>
-                <th style="border-bottom:1px solid #000; padding:8px 6px;">Rate</th>
-                <th style="border-bottom:1px solid #000; padding:8px 6px;">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style="padding:10px 6px; text-align:left;">HOUSE RENT</td>
-                <td style="padding:10px 6px;">${periodDisplay}</td>
-                <td style="padding:10px 6px;">Rs.${rateFormatted}/- P.M</td>
-                <td style="padding:10px 6px;">Rs.${amountFormatted}/-</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div style="position:absolute; right:20px; bottom:48px; text-align:right;">
-            ${
-              signatureUrl
-                ? `<img src="${signatureUrl}" alt="Signature" style="width:180px; height:auto; display:block; margin:0 0 8px auto;">`
-                : ``
-            }
-            <div style="font-size:12pt;">Signature of House</div>
-            <div style="font-size:12pt;">Owner</div>
-          </div>
-        </div>`;
-
-      setPreviewHtml(html);
     } catch (err) {
       console.error(err);
       alert("Failed to save bill");
@@ -1430,8 +1503,9 @@ export default function NewBillPage() {
         if (src.startsWith("data:image/")) {
           try {
             const isPng = src.startsWith("data:image/png");
-            const bin = Uint8Array.from(atob(src.split(",")[1] || ""), (c) =>
-              c.charCodeAt(0)
+            const bin = Uint8Array.from(
+              atob(src.split(",")[1] || ""),
+              (c) => c.charCodeAt(0)
             );
             const img = isPng
               ? await pdfDoc.embedPng(bin)
@@ -1761,100 +1835,16 @@ export default function NewBillPage() {
                     Set the billing month, date, and number.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 min-w-0">
-                  <label className="grid gap-1">
-                    <span className="text-sm">Period (Month)</span>
-                    <Controller
-                      name="period"
-                      control={form.control}
-                      render={({ field }) => (
-                        <DatePicker
-                          selected={
-                            field.value ? new Date(field.value + "-01") : null
-                          }
-                          onChange={(date) => {
-                            if (date) {
-                              const year = date.getFullYear();
-                              const month = String(
-                                date.getMonth() + 1
-                              ).padStart(2, "0");
-                              field.onChange(`${year}-${month}`);
-                            }
-                          }}
-                          dateFormat="MMMM yyyy"
-                          showMonthYearPicker
-                          showFullMonthYearPicker
-                          placeholderText="Select month and year"
-                          className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      )}
-                    />
-                    {form.formState.errors.period && (
-                      <span className="text-xs text-red-600">
-                        {form.formState.errors.period.message as string}
-                      </span>
-                    )}
-                  </label>
-                  <label className="grid gap-1">
-                    <span className="text-sm">Bill Date</span>
-                    <Controller
-                      name="date"
-                      control={form.control}
-                      render={({ field }) => (
-                        <DatePicker
-                          selected={field.value ? new Date(field.value) : null}
-                          onChange={(date) => {
-                            if (date) {
-                              field.onChange(format(date, "yyyy-MM-dd"));
-                            }
-                          }}
-                          dateFormat="dd/MM/yyyy"
-                          placeholderText="Select date"
-                          className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      )}
-                    />
-                    {form.formState.errors.date && (
-                      <span className="text-xs text-red-600">
-                        Date is required
-                      </span>
-                    )}
-                  </label>
-                  <label className="grid gap-1">
-                    <span className="text-sm">Bill Number</span>
-                    <div className="relative">
-                      <input
-                        className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-10"
-                        placeholder="Enter bill number"
-                        {...form.register("bill_number")}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const randomBillNumber = `BILL-${uuidv4()
-                            .slice(0, 8)
-                            .toUpperCase()}`;
-                          form.setValue("bill_number", randomBillNumber);
-                        }}
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
-                        title="Generate random bill number"
-                      >
-                        <svg
-                          className="w-4 h-4 text-gray-500"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  </label>
+                <CardContent>
+                  <BillDetailsSection
+                    form={form}
+                    onGenerateBillNumber={() => {
+                      const randomBillNumber = `BILL-${uuidv4()
+                        .slice(0, 8)
+                        .toUpperCase()}`;
+                      form.setValue("bill_number", randomBillNumber);
+                    }}
+                  />
                 </CardContent>
               </Card>
 
@@ -1865,99 +1855,13 @@ export default function NewBillPage() {
                     Choose a saved landlord or enter details manually.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant={
-                      landlordMode === "existing" ? "default" : "outline"
-                    }
-                    size="sm"
-                    onClick={() => form.setValue("landlord_mode", "existing")}
-                  >
-                    Existing
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={landlordMode === "manual" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => form.setValue("landlord_mode", "manual")}
-                  >
-                    Manual
-                  </Button>
-                </CardContent>
-
-                <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 min-w-0">
-                  {landlordMode === "existing" ? (
-                    <label className="grid gap-1">
-                      <span className="text-sm">Saved Landlords</span>
-                      <select
-                        className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        value={landlordIdExisting}
-                        onChange={(e) =>
-                          form.setValue("landlord_id", e.target.value)
-                        }
-                      >
-                        {landlords.length === 0 ? (
-                          <option value="" disabled>
-                            No landlords saved
-                          </option>
-                        ) : null}
-                        {landlords.map((l) => (
-                          <option key={l.id} value={l.id}>
-                            {l.name}
-                          </option>
-                        ))}
-                      </select>
-                      {form.formState.errors.landlord_id && (
-                        <span className="text-xs text-red-600">
-                          {form.formState.errors.landlord_id.message as string}
-                        </span>
-                      )}
-                    </label>
-                  ) : (
-                    <label className="grid gap-1">
-                      <span className="text-sm">Landlord Name</span>
-                      <input
-                        className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Type landlord name"
-                        {...form.register("landlord_name")}
-                      />
-                      {form.formState.errors.landlord_name && (
-                        <span className="text-xs text-red-600">
-                          {
-                            form.formState.errors.landlord_name
-                              .message as string
-                          }
-                        </span>
-                      )}
-                    </label>
-                  )}
-
-                  <label className="grid gap-1">
-                    <span className="text-sm">Agreement Date</span>
-                    <Controller
-                      name="agreement_date"
-                      control={form.control}
-                      render={({ field }) => (
-                        <DatePicker
-                          selected={field.value ? new Date(field.value) : null}
-                          onChange={(date) => {
-                            if (date) {
-                              field.onChange(format(date, "yyyy-MM-dd"));
-                            }
-                          }}
-                          dateFormat="dd/MM/yyyy"
-                          placeholderText="Select agreement date"
-                          className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-background px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      )}
-                    />
-                    {form.formState.errors.agreement_date && (
-                      <span className="text-xs text-red-600">
-                        Agreement date is required
-                      </span>
-                    )}
-                  </label>
+                <CardContent>
+                  <LandlordSection
+                    form={form}
+                    landlordMode={landlordMode}
+                    landlords={landlords}
+                    landlordIdExisting={landlordIdExisting}
+                  />
                 </CardContent>
               </Card>
 
@@ -1984,84 +1888,16 @@ export default function NewBillPage() {
                       </span>
                     )}
                   </label>
-                  <label className="grid gap-1">
-                    <span className="text-sm">Amount (Rs.)</span>
-                    <input
-                      className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="e.g. 12000"
-                      {...form.register("amount")}
-                    />
-                    {form.formState.errors.amount && (
-                      <span className="text-xs text-red-600">
-                        {form.formState.errors.amount.message as string}
-                      </span>
-                    )}
-                  </label>
-                  <label className="grid gap-1">
-                    <span className="text-sm">Signature Image (optional)</span>
-                    {/* Hidden real input */}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const reg = form.register("signature_file");
-                        reg.onChange(e);
-                        const file = e.target.files?.[0];
-                        setSignatureFileName(file ? file.name : null);
-                        // Immediately set signature_url so preview uses the newly selected image
-                        if (file) {
-                          fileToDataUrl(file)
-                            .then((dataUrl) => {
-                              form.setValue("signature_url", dataUrl);
-                            })
-                            .catch(() => {
-                              // ignore
-                            });
-                        } else {
-                          form.setValue("signature_url", null);
-                        }
-                      }}
-                    />
-                    {/* Visible proxy control */}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => fileInputRef.current?.click()}
-                      aria-label="Choose signature image file"
-                    >
-                      {(() => {
-                        const existing =
-                          landlordMode === "existing" && landlordIdExisting
-                            ? landlords.find((l) => l.id === landlordIdExisting)
-                            : undefined;
-                        const displayName =
-                          signatureFileName || existing?.signature_name || null;
-                        return (
-                          <span className="opacity-80">
-                            Choose File {displayName ?? "No file chosen"}
-                          </span>
-                        );
-                      })()}
-                    </Button>
-                    {landlordMode === "existing" &&
-                      (() => {
-                        const existing = landlords.find(
-                          (l) => l.id === landlordIdExisting
-                        );
-                        if (existing?.signature_url) {
-                          const name = existing.signature_name ?? null;
-                          return (
-                            <span className="text-xs opacity-70">
-                              Using saved signature{name ? `: ${name}` : ""}{" "}
-                              from selected landlord. Upload a file to replace.
-                            </span>
-                          );
-                        }
-                        return null;
-                      })()}
-                  </label>
+                  <PaymentSignatureSection
+                    form={form}
+                    fileInputRef={fileInputRef}
+                    signatureFileName={signatureFileName}
+                    setSignatureFileName={setSignatureFileName}
+                    landlordMode={landlordMode}
+                    landlordIdExisting={landlordIdExisting}
+                    landlords={landlords}
+                    fileToDataUrl={fileToDataUrl}
+                  />
                 </CardContent>
               </Card>
 
@@ -2073,122 +1909,35 @@ export default function NewBillPage() {
             </form>
           )}
           {previewHtml && (
-            <div className="mt-6 md:mt-0 md:sticky md:top-4 border border-gray-300 dark:border-gray-700 rounded-lg p-2 sm:p-4 responsive-pane w-full max-w-3xl mx-auto h-[calc(100vh-120px)] overflow-auto bg-white dark:bg-gray-900">
-              <div className="sticky top-0 z-10 bg-white/85 dark:bg-gray-900/85 supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-gray-900/60 backdrop-blur flex items-center justify-between gap-3 py-2 border-b border-gray-200 dark:border-gray-700 mb-2">
-                <div className="text-sm font-semibold">Preview</div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={exportPdf}
-                    title="Download PDF"
-                  >
-                    Download PDF
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={
-                      selectedTemplateId
-                        ? exportTemplateVectorPdf
-                        : exportDefaultVectorPdf
-                    }
-                    title="Vector (pdf-lib) exact layout"
-                  >
-                    Download PDF (vector)
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={printPreview}
-                    title="Print preview"
-                  >
-                    Print
-                  </Button>
-                </div>
-              </div>
-              <div ref={previewContainerRef} className="w-full">
-                {/* Reserve scaled space to prevent clipping */}
-                <div
-                  className="mx-auto"
-                  style={{
-                    width: `${Math.round(794 * previewScale)}px`,
-                    height: `${Math.round(baseHeight * previewScale)}px`,
-                    position: "relative",
-                  }}
-                >
-                  <div
-                    ref={previewInnerRef}
-                    style={{
-                      transform: `scale(${previewScale})`,
-                      transformOrigin: "top left",
-                      width: "794px",
-                    }}
-                    dangerouslySetInnerHTML={{ __html: previewHtml as string }}
-                  />
-                </div>
-              </div>
-            </div>
+            <PreviewPanel
+              title="Preview"
+              previewHtml={previewHtml}
+              previewScale={previewScale}
+              baseHeight={baseHeight}
+              previewContainerRef={previewContainerRef}
+              previewInnerRef={previewInnerRef}
+              onExportPdf={exportPdf}
+              onExportVectorPdf={
+                selectedTemplateId ? exportTemplateVectorPdf : exportDefaultVectorPdf
+              }
+              onPrint={printPreview}
+            />
           )}
         </div>
 
         {/* Global sticky footer actions */}
-        <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/90 dark:bg-gray-900/90 supports-[backdrop-filter]:bg-white/70 dark:supports-[backdrop-filter]:bg-gray-900/70 backdrop-blur border-t border-gray-200 dark:border-gray-800">
-          <div className="max-w-6xl mx-auto px-3 sm:px-6 py-2 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                disabled={saving}
-                onClick={
-                  selectedTemplateId
-                    ? submitFromTemplate
-                    : () => formRef.current?.requestSubmit()
-                }
-              >
-                {saving ? "Saving..." : "Save & Preview"}
-              </Button>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={exportPdf}
-                title="Download PDF"
-                disabled={!previewHtml}
-              >
-                Download PDF
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={
-                  selectedTemplateId
-                    ? exportTemplateVectorPdf
-                    : exportDefaultVectorPdf
-                }
-                title="Vector (pdf-lib) exact layout"
-                disabled={!previewHtml}
-              >
-                Download PDF (vector)
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={printPreview}
-                title="Print preview"
-                disabled={!previewHtml}
-              >
-                Print
-              </Button>
-            </div>
-          </div>
-        </div>
+        <FooterActions
+          saving={saving}
+          selectedTemplateId={selectedTemplateId}
+          onSaveAndPreviewTemplate={submitFromTemplate}
+          onSaveAndPreviewForm={() => formRef.current?.requestSubmit()}
+          onExportPdf={exportPdf}
+          onExportVectorPdf={
+            selectedTemplateId ? exportTemplateVectorPdf : exportDefaultVectorPdf
+          }
+          onPrint={printPreview}
+          previewHtml={previewHtml}
+        />
       </div>
     </div>
   );
