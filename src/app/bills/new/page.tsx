@@ -1,12 +1,15 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { usePreviewLayout } from "@/hooks/usePreviewLayout";
+import { useLandlordSignatureSync } from "@/hooks/useLandlordSignatureSync";
+import { useBillExport } from "@/hooks/useBillExport";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { billFormSchema, type BillFormInput } from "@/lib/validation";
 import { format } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
 import type { Landlord, Bill } from "@/lib/types";
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+
 import { Button } from "@/components/ui/button";
 import { PreviewPanel } from "@/components/PreviewPanel";
 import { FooterActions } from "@/components/FooterActions";
@@ -19,7 +22,6 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-  CardFooter,
 } from "@/components/ui/card";
 import {
   computeNextNumericBillNumber,
@@ -29,8 +31,6 @@ import {
   saveBill,
 } from "@/lib/localStore";
 import PdfUpload from "@/components/PdfUpload";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
 
 const monthNames = [
   "JANUARY",
@@ -66,14 +66,8 @@ export default function NewBillPage() {
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [saving, setSaving] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
-  const previewContainerRef = useRef<HTMLDivElement | null>(null);
-  const [previewScale, setPreviewScale] = useState(1);
-  const previewInnerRef = useRef<HTMLDivElement | null>(null);
-  const [baseHeight, setBaseHeight] = useState(1123);
-  const [signatureFileName, setSignatureFileName] = useState<string | null>(
-    null
-  );
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const { previewContainerRef, previewInnerRef, previewScale, baseHeight } =
+    usePreviewLayout(previewHtml);
   // Track pending file reads for template image/signature fields to avoid race conditions
   const pendingReadsRef = useRef<Promise<void>[]>([]);
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -89,6 +83,10 @@ export default function NewBillPage() {
       landlord_name: "",
     },
   });
+
+  // Watched landlord fields (used by signature sync hook)
+  const landlordMode = form.watch("landlord_mode");
+  const landlordIdExisting = form.watch("landlord_id") ?? "";
 
   // Templates from Advanced Editor (localStorage) with fields
   type TemplateField = {
@@ -136,6 +134,15 @@ export default function NewBillPage() {
     templates.find((t) => t.id === selectedTemplateId) || null;
   const [templateForm, setTemplateForm] = useState<Record<string, string>>({});
   const [templateErrors, setTemplateErrors] = useState<string[]>([]);
+
+  // Landlord signature sync + file input/name management
+  const { signatureFileName, setSignatureFileName, fileInputRef } =
+    useLandlordSignatureSync({
+      form: form as any,
+      landlords,
+      landlordMode,
+      landlordIdExisting,
+    });
 
   // Map templateForm values into the existing bill form so that validation and onSubmit work
   const syncTemplateToForm = () => {
@@ -600,41 +607,7 @@ export default function NewBillPage() {
     }
   }, [form]);
 
-  // Resize preview to fit container without cutting content
-  useEffect(() => {
-    const updateScale = () => {
-      if (!previewHtml) return;
-      const container = previewContainerRef.current;
-      if (!container) return;
-      const containerWidth = container.clientWidth;
-      const baseWidth = 794; // A4 width at ~96dpi
-      const scale = Math.min(1, containerWidth / baseWidth);
-      setPreviewScale(scale);
-    };
-    updateScale();
-    if (typeof window !== "undefined") {
-      window.addEventListener("resize", updateScale);
-      return () => window.removeEventListener("resize", updateScale);
-    }
-  }, [previewHtml]);
-
-  // Measure actual content height (unscaled) and reserve scaled space
-  useEffect(() => {
-    const measure = () => {
-      const el = previewInnerRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const scaledHeight = rect.height; // current scaled height
-      const computedBase = Math.max(
-        1123,
-        Math.round(scaledHeight / Math.max(previewScale, 0.001))
-      );
-      setBaseHeight(computedBase);
-    };
-    // Allow DOM to paint before measuring
-    const r = requestAnimationFrame(measure);
-    return () => cancelAnimationFrame(r);
-  }, [previewHtml, previewScale]);
+  // Preview layout (scale/height) handled by usePreviewLayout
 
   // Live preview: debounce updates when form or template values change
   const livePreviewTimerRef = useRef<number | null>(null);
@@ -671,27 +644,9 @@ export default function NewBillPage() {
     };
   }, [form, selectedTemplate, selectedTemplateId, templateForm, landlords]);
 
-  const landlordMode = form.watch("landlord_mode");
   const landlordNameManual = form.watch("landlord_name")?.trim() ?? "";
-  const landlordIdExisting = form.watch("landlord_id") ?? "";
 
-  // Auto-fill signature from existing landlord selection
-  useEffect(() => {
-    if (landlordMode === "existing" && landlordIdExisting) {
-      const existing = landlords.find((l) => l.id === landlordIdExisting);
-      if (existing?.signature_url) {
-        form.setValue("signature_url", existing.signature_url);
-      } else {
-        form.setValue("signature_url", null);
-      }
-    }
-    if (landlordMode === "manual") {
-      // Avoid carrying over signature_url from previous existing selection
-      form.setValue("signature_url", null);
-    }
-    // Reset displayed file name when landlord selection/mode changes
-    setSignatureFileName(null);
-  }, [landlordMode, landlordIdExisting, landlords, form]);
+  // Signature syncing handled by useLandlordSignatureSync
 
   const handleFieldsExtracted = (fields: Partial<BillFormInput>) => {
     // Set extracted fields to form
@@ -808,778 +763,16 @@ export default function NewBillPage() {
     }
   }
 
-  async function exportPdf() {
-    if (!previewHtml) return;
-    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-      import("html2canvas"),
-      import("jspdf"),
-    ]);
-
-    // Create an isolated wrapper with bleed padding to ensure nothing sits on the page edge
-    const wrapper = document.createElement("div");
-    const bleed = 24; // px visual bleed padding (increased further)
-    const baseWidthPx = 794;
-    const pageHeightPx = 1123;
-    wrapper.style.position = "fixed";
-    wrapper.style.left = "-10000px"; // keep off-screen
-    wrapper.style.top = "0";
-    wrapper.style.background = "#ffffff";
-    wrapper.style.padding = `${bleed}px`;
-    wrapper.style.boxSizing = "border-box";
-    // total width becomes baseWidthPx + bleed*2, but we'll capture entire wrapper
-    const inner = document.createElement("div");
-    inner.style.width = `${baseWidthPx}px`;
-    inner.style.minHeight = `${pageHeightPx}px`;
-    inner.style.background = "#ffffff";
-    inner.innerHTML = previewHtml;
-    wrapper.appendChild(inner);
-    document.body.appendChild(wrapper);
-
-    // Render at higher DPI (~300dpi equivalent) for sharper text in the rasterized PDF
-    const cssDpi = 96;
-    const targetDpi = 300;
-    const scale = Math.min(
-      5,
-      Math.ceil(
-        (targetDpi / cssDpi) * Math.max(1, window.devicePixelRatio || 1)
-      )
-    );
-    const canvas = await html2canvas(wrapper, {
-      scale,
-      useCORS: true,
-      backgroundColor: "#ffffff",
-      scrollX: 0,
-      scrollY: 0,
-      windowWidth: wrapper.scrollWidth,
-      windowHeight: wrapper.scrollHeight,
+  // Export/print handlers via hook
+  const { exportPdf, printPreview, exportDefaultVectorPdf, exportTemplateVectorPdf } =
+    useBillExport({
+      previewHtml,
+      baseHeight,
+      form: form as any,
+      landlords,
+      selectedTemplate,
+      templateForm,
     });
-
-    // Add extra safety padding around the rendered canvas before putting into PDF
-    const pad = 24; // px extra around the raster (increased further)
-    const off = document.createElement("canvas");
-    off.width = canvas.width + pad * 2;
-    off.height = canvas.height + pad * 2;
-    const octx = off.getContext("2d");
-    if (!octx) {
-      document.body.removeChild(wrapper);
-      return;
-    }
-    octx.fillStyle = "#ffffff";
-    octx.fillRect(0, 0, off.width, off.height);
-    octx.drawImage(canvas, pad, pad);
-
-    // Use PNG to avoid JPEG subsampling/compression blur
-    const imgData = off.toDataURL("image/png");
-    const pdf = new jsPDF({
-      unit: "px",
-      format: [off.width, off.height],
-      orientation: off.width > off.height ? "landscape" : "portrait",
-      // Disable extra compression for maximum sharpness (bigger files)
-      compress: false,
-    });
-    // Slightly inset the image to avoid any edge clipping by PDF viewers/printers
-    pdf.addImage(
-      imgData,
-      "PNG",
-      0.5,
-      0.5,
-      Math.max(1, off.width - 1),
-      Math.max(1, off.height - 1)
-    );
-    pdf.save(`house-rent-bill-${Date.now()}.pdf`);
-
-    document.body.removeChild(wrapper);
-  }
-
-  // Vector PDF export for the default bill (non-template) using pdf-lib
-  async function exportDefaultVectorPdf() {
-    if (!previewHtml) return; // ensure there's something to export
-
-    // Use same base width as preview and the measured base height
-    const baseWidth = 794;
-    const pageHeight = Math.max(1, baseHeight);
-
-    const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([baseWidth, pageHeight]);
-
-    const fontRegular = await pdfDoc.embedStandardFont(
-      StandardFonts.TimesRoman
-    );
-    const fontBold = await pdfDoc.embedStandardFont(
-      StandardFonts.TimesRomanBold
-    );
-
-    // Helpers for drawing from top-left coordinate system
-    const drawText = (
-      text: string,
-      x: number,
-      yTop: number,
-      size: number,
-      opts?: {
-        bold?: boolean;
-        underline?: boolean;
-        color?: ReturnType<typeof rgb>;
-      }
-    ) => {
-      const font = opts?.bold ? fontBold : fontRegular;
-      const ascent = font.sizeAtHeight(size);
-      const y = pageHeight - (yTop + ascent);
-      page.drawText(text, {
-        x,
-        y,
-        size,
-        font,
-        color: opts?.color ?? rgb(0, 0, 0),
-      });
-      if (opts?.underline) {
-        const width = font.widthOfTextAtSize(text, size);
-        const underlineY = y - 2;
-        page.drawLine({
-          start: { x, y: underlineY },
-          end: { x: x + width, y: underlineY },
-          color: rgb(0, 0, 0),
-          thickness: 0.8,
-        });
-      }
-    };
-
-    const drawCenteredText = (
-      text: string,
-      yTop: number,
-      size: number,
-      opts?: { bold?: boolean; underline?: boolean }
-    ) => {
-      const font = opts?.bold ? fontBold : fontRegular;
-      const width = font.widthOfTextAtSize(text, size);
-      const x = (baseWidth - width) / 2;
-      drawText(text, x, yTop, size, opts);
-    };
-
-    const drawTableCellText = (
-      text: string,
-      x: number,
-      yTop: number,
-      size: number,
-      maxWidth: number,
-      align: "left" | "center" | "right" = "left"
-    ) => {
-      const font = fontRegular;
-      const width = font.widthOfTextAtSize(text, size);
-      let tx = x;
-      if (align === "center") tx = x + (maxWidth - width) / 2;
-      if (align === "right") tx = x + (maxWidth - width);
-      drawText(text, tx, yTop, size);
-    };
-
-    // Page background
-    page.drawRectangle({
-      x: 0,
-      y: 0,
-      width: baseWidth,
-      height: pageHeight,
-      color: rgb(1, 1, 1),
-    });
-
-    // Layout paddings to match preview wrapper: padding: 24px 20px 180px 20px
-    const padTop = 24;
-    const padRight = 20;
-    const padBottom = 180;
-    const padLeft = 20;
-
-    // Read current form values
-    const values = form.getValues();
-    const periodValue: string =
-      values.period || buildPeriodFromDate(new Date());
-    const periodDisplay = monthInputToDisplay(periodValue);
-    const billNo: string =
-      values.bill_number || `BILL-${uuidv4().slice(0, 8).toUpperCase()}`;
-    const billDateDisplay = values.date
-      ? format(new Date(values.date), "dd-MM-yyyy")
-      : format(new Date(), "dd-MM-yyyy");
-    const agreementDisplay = values.agreement_date
-      ? format(new Date(values.agreement_date), "do MMMM yyyy")
-      : format(new Date(), "do MMMM yyyy");
-    const landlordName = (() => {
-      if (values.landlord_mode === "existing" && values.landlord_id) {
-        const existing = landlords.find((l) => l.id === values.landlord_id);
-        return existing?.name || "";
-      }
-      return (values.landlord_name || "").toString();
-    })();
-    const amountNum = Number(values.amount || 0);
-    const rateNum = values.rate ? Number(values.rate) : amountNum;
-    const amountFormatted = amountNum.toLocaleString("en-IN", {
-      maximumFractionDigits: 0,
-    });
-    const rateFormatted = rateNum.toLocaleString("en-IN", {
-      maximumFractionDigits: 0,
-    });
-
-    // Title
-    drawCenteredText("HOUSE RENT BILL", padTop, 18, {
-      bold: true,
-      underline: true,
-    });
-
-    // Period and bill details block
-    let cursorY = padTop + 20 + 18; // title size ~18 plus spacing
-    const blockGap = 20;
-    cursorY += blockGap;
-    drawText(`PERIOD OF BILL: ${periodDisplay}`, padLeft, cursorY, 12, {
-      bold: true,
-    });
-
-    cursorY += 22;
-    const detailsMaxW = baseWidth - padLeft - padRight - 0;
-    // Left: BILL NO:, Right: DATE:
-    const leftText = `BILL NO:${billNo}`;
-    const rightText = `DATE: ${billDateDisplay}`;
-    drawText(leftText, padLeft, cursorY, 12, { bold: true });
-    const rightW = fontBold.widthOfTextAtSize(rightText, 12);
-    const rightX = baseWidth - padRight - rightW;
-    drawText(rightText, rightX, cursorY, 12, { bold: true });
-
-    // Intro paragraph
-    cursorY += 28;
-    drawText("Sir,", padLeft, cursorY, 14);
-    cursorY += 20;
-    const intro = `I am submitting the House rent bill of Smt. ${landlordName} (Private House) for accommodation of BtED, Basta as per Agreement Dtd. ${agreementDisplay} BETWEEN Executive Engineer, BtED, Basta and Smt. ${landlordName} for the month of ${periodDisplay}`;
-    // naive wrap for intro paragraph
-    const maxTextWidth = baseWidth - padLeft - padRight;
-    const words = intro.split(/\s+/);
-    let line = "";
-    const lineHeight = 12 * 1.45;
-    const font = fontRegular;
-    for (const w of words) {
-      const test = line ? line + " " + w : w;
-      if (
-        font.widthOfTextAtSize(test, 12) <= maxTextWidth ||
-        line.length === 0
-      ) {
-        line = test;
-      } else {
-        drawText(line, padLeft, cursorY, 12);
-        cursorY += lineHeight;
-        line = w;
-      }
-    }
-    if (line) {
-      drawText(line, padLeft, cursorY, 12);
-      cursorY += lineHeight;
-    }
-
-    // Table
-    cursorY += 14;
-    const tableX = padLeft;
-    const tableYTop = cursorY;
-    const tableWidth = baseWidth - padLeft - padRight;
-    const col1W = Math.round(tableWidth * 0.46);
-    const col2W = Math.round(tableWidth * 0.18);
-    const col3W = Math.round(tableWidth * 0.18);
-    const col4W = tableWidth - col1W - col2W - col3W;
-
-    // Header row
-    const headerSize = 12;
-    const rowPadY = 8; // visual padding
-    const cellPadX = 6;
-    const headerHeight = headerSize + rowPadY + 6; // approx
-    // Bottom border of header
-    page.drawLine({
-      start: { x: tableX, y: pageHeight - (tableYTop + headerHeight) },
-      end: {
-        x: tableX + tableWidth,
-        y: pageHeight - (tableYTop + headerHeight),
-      },
-      color: rgb(0, 0, 0),
-      thickness: 1,
-    });
-    drawTableCellText(
-      "Description",
-      tableX + cellPadX,
-      tableYTop + rowPadY,
-      headerSize,
-      col1W - cellPadX * 2,
-      "left"
-    );
-    drawTableCellText(
-      "Month",
-      tableX + col1W + cellPadX,
-      tableYTop + rowPadY,
-      headerSize,
-      col2W - cellPadX * 2,
-      "center"
-    );
-    drawTableCellText(
-      "Rate",
-      tableX + col1W + col2W + cellPadX,
-      tableYTop + rowPadY,
-      headerSize,
-      col3W - cellPadX * 2,
-      "center"
-    );
-    drawTableCellText(
-      "Amount",
-      tableX + col1W + col2W + col3W + cellPadX,
-      tableYTop + rowPadY,
-      headerSize,
-      col4W - cellPadX * 2,
-      "center"
-    );
-
-    // Data row
-    const dataY = tableYTop + headerHeight + 10;
-    const dataSize = 12;
-    const dataHeight = dataSize + rowPadY + 10;
-    drawTableCellText(
-      "HOUSE RENT",
-      tableX + cellPadX,
-      dataY,
-      dataSize,
-      col1W - cellPadX * 2,
-      "left"
-    );
-    drawTableCellText(
-      periodDisplay,
-      tableX + col1W + cellPadX,
-      dataY,
-      dataSize,
-      col2W - cellPadX * 2,
-      "center"
-    );
-    drawTableCellText(
-      `Rs.${rateFormatted}/- P.M`,
-      tableX + col1W + col2W + cellPadX,
-      dataY,
-      dataSize,
-      col3W - cellPadX * 2,
-      "center"
-    );
-    drawTableCellText(
-      `Rs.${amountFormatted}/-`,
-      tableX + col1W + col2W + col3W + cellPadX,
-      dataY,
-      dataSize,
-      col4W - cellPadX * 2,
-      "center"
-    );
-
-    // Outer table rectangle and internal column dividers (2-row table: header line already drawn)
-    const tableHeight = headerHeight + dataHeight;
-    const tableBottomY = tableYTop + tableHeight;
-    // Outline
-    page.drawRectangle({
-      x: tableX,
-      y: pageHeight - tableBottomY,
-      width: tableWidth,
-      height: tableHeight,
-      borderColor: rgb(0, 0, 0),
-      borderWidth: 1,
-    });
-    // Column dividers
-    const dividerY1 = pageHeight - tableYTop;
-    const dividerY2 = pageHeight - tableBottomY;
-    const x1 = tableX + col1W;
-    const x2 = x1 + col2W;
-    const x3 = x2 + col3W;
-    page.drawLine({
-      start: { x: x1, y: dividerY2 },
-      end: { x: x1, y: dividerY1 },
-      color: rgb(0, 0, 0),
-      thickness: 1,
-    });
-    page.drawLine({
-      start: { x: x2, y: dividerY2 },
-      end: { x: x2, y: dividerY1 },
-      color: rgb(0, 0, 0),
-      thickness: 1,
-    });
-    page.drawLine({
-      start: { x: x3, y: dividerY2 },
-      end: { x: x3, y: dividerY1 },
-      color: rgb(0, 0, 0),
-      thickness: 1,
-    });
-
-    // Signature block at bottom-right
-    const sigBlockBottom = padBottom - 20; // keep some spacing from page bottom padding
-    const sigBlockRight = padRight;
-    const sigImgMaxW = 92; // smaller to match preview and reduce blur
-    const sigImgMaxH = 32; // smaller height
-    let sigYTop = pageHeight - sigBlockBottom - sigImgMaxH; // approximate top position for image
-    let signatureUrl: string | null = values.signature_url || null;
-    if (
-      !signatureUrl &&
-      values.landlord_mode === "existing" &&
-      values.landlord_id
-    ) {
-      const existing = landlords.find((l) => l.id === values.landlord_id);
-      if (existing?.signature_url) signatureUrl = existing.signature_url;
-    }
-    if (
-      signatureUrl &&
-      typeof signatureUrl === "string" &&
-      signatureUrl.startsWith("data:image/")
-    ) {
-      try {
-        const isPng = signatureUrl.startsWith("data:image/png");
-        const bin = Uint8Array.from(
-          atob(signatureUrl.split(",")[1] || ""),
-          (c) => c.charCodeAt(0)
-        );
-        const img = isPng
-          ? await pdfDoc.embedPng(bin)
-          : await pdfDoc.embedJpg(bin);
-        // Do not upscale; only downscale to avoid blur
-        const scale = Math.min(
-          1,
-          sigImgMaxW / img.width,
-          sigImgMaxH / img.height
-        );
-        const dw = img.width * scale;
-        const dh = img.height * scale;
-        // Center image over the signature label box (200px wide)
-        const boxWidth = 200;
-        const boxLeft = baseWidth - sigBlockRight - boxWidth;
-        const dx = boxLeft + (boxWidth - dw) / 2;
-        // Anchor the image just above the first signature label with a small gap
-        const label1Top = pageHeight - padBottom + 40; // yTop used for first label
-        const gap = 6; // tighter distance between image bottom and label top
-        const dy = pageHeight - (label1Top - gap);
-        page.drawImage(img, { x: dx, y: dy, width: dw, height: dh });
-        sigYTop += dh + 8;
-      } catch {}
-    }
-    // Signature text lines (centered within a right-aligned box)
-    const labelBoxW = 200;
-    const labelLeft = baseWidth - sigBlockRight - labelBoxW;
-    const sigLine1 = "Signature of House";
-    const sigLine2 = "Owner";
-    const sig1W = fontRegular.widthOfTextAtSize(sigLine1, 12);
-    const sig2W = fontRegular.widthOfTextAtSize(sigLine2, 12);
-    const sig1X = labelLeft + (labelBoxW - sig1W) / 2;
-    const sig2X = labelLeft + (labelBoxW - sig2W) / 2;
-    drawText(sigLine1, sig1X, pageHeight - padBottom + 40, 12);
-    drawText(sigLine2, sig2X, pageHeight - padBottom + 58, 12);
-
-    // Save
-    const bytes = await pdfDoc.save();
-    // Create a fresh ArrayBuffer (not SharedArrayBuffer) and copy bytes
-    const ab2 = new ArrayBuffer(bytes.byteLength);
-    new Uint8Array(ab2).set(bytes);
-    const blob = new Blob([ab2], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `house-rent-bill-vector-${Date.now()}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
-
-  // Print the current preview in a clean A4 layout
-  function printPreview() {
-    if (!previewHtml) return;
-    // Extract inner body HTML from previewHtml (falls back to raw if not present)
-    const bodyMatch = previewHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-    const inner = bodyMatch ? bodyMatch[1] : previewHtml;
-
-    const w = window.open("", "_blank");
-    if (!w) return;
-    const doc = w.document;
-    const html = `<!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset=\"utf-8\" />
-        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
-        <title>Print Preview</title>
-        <style>
-          /* Use physical units to avoid fractional scaling by the browser */
-          @page { size: A4; margin: 0; }
-          html, body { background: #f3f4f6; height: 100%; }
-          body { margin: 0; }
-          .wrap { width: 210mm; min-height: 297mm; margin: 0 auto; background: #ffffff; }
-          /* Rendering hints for sharper output */
-          html, body, .wrap { -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; }
-          img { image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
-          /* Table print normalization for sharp borders */
-          .wrap table { width: 100%; border-collapse: collapse; border-spacing: 0; }
-          .wrap th, .wrap td { border: 0.8pt solid #1f2937; /* dark gray close to black */ padding: 3mm 2mm; }
-          .wrap thead th { border-bottom-width: 1pt; }
-          .wrap tr { page-break-inside: avoid; }
-          .wrap th { font-weight: 700; }
-          /* Improve print fidelity */
-          @media print {
-            html, body { background: #ffffff; }
-            .wrap { width: 210mm; min-height: 297mm; margin: 0 auto; }
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-            color-adjust: exact;
-          }
-        </style>
-      </head>
-      <body>
-        <div class=\"wrap\">${inner}</div>
-        <script>
-          window.addEventListener('load', function(){
-            window.focus();
-            window.print();
-            setTimeout(function(){ window.close(); }, 250);
-          });
-        <\/script>
-      </body>
-    </html>`;
-    doc.open();
-    doc.write(html);
-    doc.close();
-  }
-
-  // Schema-driven vector PDF export for selected template (uses pdf-lib)
-  async function exportTemplateVectorPdf() {
-    if (!selectedTemplate) {
-      alert("No template selected");
-      return;
-    }
-
-    // Match preview sizing exactly (see buildTemplatePreviewHtml)
-    const baseWidth = 794; // px
-    const tplWidth = Math.max(1, selectedTemplate.width ?? 794);
-    const tplHeight = Math.max(1, selectedTemplate.height ?? 1123);
-    const scale = baseWidth / tplWidth;
-    const scaledHeight = Math.round(tplHeight * scale);
-    const safePad = 16; // px padding used in preview
-
-    // Build a PDF page with same dimensions as preview wrapper
-    const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([baseWidth, scaledHeight]);
-
-    // Prepare fonts
-    const fontRegular = await pdfDoc.embedStandardFont(StandardFonts.Helvetica);
-    const fontBold = await pdfDoc.embedStandardFont(
-      StandardFonts.HelveticaBold
-    );
-
-    // Helpers
-    const parseColorWithOpacity = (
-      s?: string
-    ): { color: ReturnType<typeof rgb>; opacity: number } | null => {
-      if (!s) return null;
-      const val = s.trim().toLowerCase();
-      if (val === "transparent") return null;
-      // #rgb / #rrggbb
-      if (/^#?[0-9a-f]{3}$/i.test(val)) {
-        const hex = val.replace("#", "");
-        const r = parseInt(hex[0] + hex[0], 16) / 255;
-        const g = parseInt(hex[1] + hex[1], 16) / 255;
-        const b = parseInt(hex[2] + hex[2], 16) / 255;
-        return { color: rgb(r, g, b), opacity: 1 };
-      }
-      if (/^#?[0-9a-f]{6}$/i.test(val)) {
-        const hex = val.replace("#", "");
-        const r = parseInt(hex.slice(0, 2), 16) / 255;
-        const g = parseInt(hex.slice(2, 4), 16) / 255;
-        const b = parseInt(hex.slice(4, 6), 16) / 255;
-        return { color: rgb(r, g, b), opacity: 1 };
-      }
-      // rgb(a)
-      const m = val.match(/^rgba?\(([^)]+)\)$/);
-      if (m) {
-        const parts = m[1].split(",").map((p) => p.trim());
-        const r = Math.min(255, Math.max(0, parseFloat(parts[0] || "0"))) / 255;
-        const g = Math.min(255, Math.max(0, parseFloat(parts[1] || "0"))) / 255;
-        const b = Math.min(255, Math.max(0, parseFloat(parts[2] || "0"))) / 255;
-        const a =
-          parts[3] !== undefined
-            ? Math.min(1, Math.max(0, parseFloat(parts[3])))
-            : 1;
-        return { color: rgb(r, g, b), opacity: a };
-      }
-      return null;
-    };
-
-    const drawWrappedText = (
-      text: string,
-      opts: {
-        x: number;
-        y: number;
-        maxWidth: number;
-        lineHeight: number;
-        fontSize: number;
-        align: "left" | "center" | "right";
-        bold?: boolean;
-        color: ReturnType<typeof rgb>;
-      }
-    ) => {
-      const font = opts.bold ? fontBold : fontRegular;
-      // naive wrap by words within maxWidth
-      const words = text.split(/\s+/);
-      let line = "";
-      let cursorY = opts.y; // y is top; pdf-lib draws from bottom baseline, so adjust below
-      const lines: string[] = [];
-      for (const w of words) {
-        const test = line ? line + " " + w : w;
-        const width = font.widthOfTextAtSize(test, opts.fontSize);
-        if (width <= opts.maxWidth || line.length === 0) {
-          line = test;
-        } else {
-          lines.push(line);
-          line = w;
-        }
-      }
-      if (line) lines.push(line);
-
-      const ascent = font.sizeAtHeight(opts.fontSize);
-      // draw each line
-      for (let i = 0; i < lines.length; i++) {
-        const s = lines[i];
-        const w = font.widthOfTextAtSize(s, opts.fontSize);
-        let x = opts.x;
-        if (opts.align === "center") x = opts.x + (opts.maxWidth - w) / 2;
-        if (opts.align === "right") x = opts.x + (opts.maxWidth - w);
-        const yBaseline = scaledHeight - (cursorY + ascent); // convert top-origin to PDF bottom-origin
-        page.drawText(s, {
-          x,
-          y: yBaseline,
-          size: opts.fontSize,
-          font,
-          color: opts.color,
-        });
-        cursorY += opts.lineHeight;
-      }
-    };
-
-    // Optional: draw inner background (white) to mimic preview
-    page.drawRectangle({
-      x: 0,
-      y: 0,
-      width: baseWidth,
-      height: scaledHeight,
-      color: rgb(1, 1, 1),
-    });
-
-    // Draw fields (scaled and inset by safePad)
-    for (const f of selectedTemplate.fields) {
-      const v = (templateForm[f.id] ?? f.value ?? "").toString();
-      const x = Math.round((f.x ?? 0) * scale) + safePad;
-      const y = Math.round((f.y ?? 0) * scale) + safePad;
-      const w = Math.max(1, Math.round((f.width ?? 120) * scale));
-      const h = Math.max(1, Math.round((f.height ?? 24) * scale));
-      const fs = Math.max(8, Math.round((f.fontSize ?? 12) * scale));
-      const isBold = Boolean(f.isBold);
-      const align = f.alignment ?? "left";
-      const textParsed = parseColorWithOpacity(f.textColor || "#000000");
-      const textColor = textParsed?.color || rgb(0, 0, 0);
-      const bgParsed = parseColorWithOpacity(f.backgroundColor);
-      const borderWidth = Math.max(0, Math.round((f.borderWidth ?? 0) * scale));
-      const borderParsed = parseColorWithOpacity(f.borderColor);
-      const borderColor = borderParsed?.color || rgb(0, 0, 0);
-
-      // Background
-      if (bgParsed) {
-        page.drawRectangle({
-          x,
-          y: scaledHeight - (y + h),
-          width: w,
-          height: h,
-          color: bgParsed.color,
-          opacity: bgParsed.opacity,
-        });
-      }
-      // Border
-      if (borderWidth > 0) {
-        page.drawRectangle({
-          x,
-          y: scaledHeight - (y + h),
-          width: w,
-          height: h,
-          borderColor,
-          borderWidth,
-          opacity: borderParsed?.opacity ?? 1,
-        });
-      }
-
-      if (f.type === "image" || f.type === "signature") {
-        const src = v || "";
-        if (src.startsWith("data:image/")) {
-          try {
-            const isPng = src.startsWith("data:image/png");
-            const bin = Uint8Array.from(
-              atob(src.split(",")[1] || ""),
-              (c) => c.charCodeAt(0)
-            );
-            const img = isPng
-              ? await pdfDoc.embedPng(bin)
-              : await pdfDoc.embedJpg(bin);
-            const imgW = img.width;
-            const imgH = img.height;
-            // contain fit
-            const scale = Math.min(w / imgW, h / imgH);
-            const dw = imgW * scale;
-            const dh = imgH * scale;
-            const dx = x + (w - dw) / 2;
-            const dy = scaledHeight - (y + (h + dh) / 2); // center vertically
-            page.drawImage(img, { x: dx, y: dy, width: dw, height: dh });
-          } catch {}
-        }
-        continue;
-      }
-
-      // Text-like fields
-      const padding = 6; // inner padding
-      const contentX = x + padding;
-      const contentY = y + padding;
-      const contentW = Math.max(1, w - padding * 2);
-      const lineHeight = Math.round(fs * 1.32);
-      // Split by newlines, wrap each paragraph
-      const paragraphs = v.split(/\r?\n/);
-      let currentY = contentY;
-      for (const para of paragraphs) {
-        drawWrappedText(para, {
-          x: contentX,
-          y: currentY,
-          maxWidth: contentW,
-          lineHeight,
-          fontSize: fs,
-          align: align,
-          bold: isBold,
-          color: textColor,
-        });
-        // advance estimate: wrap height unknown; approximate by word-wrapped length
-        const font = isBold ? fontBold : fontRegular;
-        const words = para.split(/\s+/);
-        let line = "";
-        let lines = 0;
-        for (const w2 of words) {
-          const t = line ? line + " " + w2 : w2;
-          if (font.widthOfTextAtSize(t, fs) <= contentW || line.length === 0) {
-            line = t;
-          } else {
-            lines += 1;
-            line = w2;
-          }
-        }
-        if (line) lines += 1;
-        currentY += lines * lineHeight;
-      }
-    }
-
-    const bytes = await pdfDoc.save();
-    // Create a fresh ArrayBuffer (not SharedArrayBuffer) and copy bytes for Blob
-    const ab2 = new ArrayBuffer(bytes.byteLength);
-    new Uint8Array(ab2).set(bytes);
-    const blob = new Blob([ab2], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const name = (selectedTemplate.name || "template")
-      .replace(/[^a-z0-9]/gi, "_")
-      .toLowerCase();
-    a.href = url;
-    a.download = `${name}_vector.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
 
   return (
     <div className="h-screen overflow-hidden">
